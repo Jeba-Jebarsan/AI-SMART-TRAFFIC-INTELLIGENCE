@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AI Smart Traffic Intelligence Platform — Sri Lanka</title>
+<style>
+  :root{
+    --bg:#070b14; --bg2:#0b1220; --panel:rgba(255,255,255,.035);
+    --panel-brd:rgba(255,255,255,.09); --txt:#e6ebf5; --muted:#8b97ad;
+    --red:#ef4444; --amber:#f59e0b; --green:#22c55e; --purple:#a855f7;
+    --blue:#3b82f6; --teal:#14b8a6; --cyan:#22d3ee;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;
+    background:
+      radial-gradient(1200px 600px at 80% -10%,rgba(59,130,246,.10),transparent),
+      radial-gradient(900px 500px at 0% 100%,rgba(168,85,247,.08),transparent),
+      linear-gradient(180deg,var(--bg),var(--bg2));
+    color:var(--txt); min-height:100vh; padding:16px 20px 40px;
+  }
+  .mono{font-family:ui-monospace,'Cascadia Code',Consolas,monospace}
+  a{color:inherit}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    padding:12px 18px;border:1px solid var(--panel-brd);border-radius:16px;
+    background:linear-gradient(90deg,rgba(239,68,68,.06),rgba(59,130,246,.05));
+    backdrop-filter:blur(8px);margin-bottom:14px}
+  .brand{display:flex;align-items:center;gap:12px;font-size:18px;font-weight:800;letter-spacing:.4px}
+  .brand .logo{font-size:26px;filter:drop-shadow(0 0 8px rgba(239,68,68,.5))}
+  .brand small{display:block;font-size:10px;font-weight:600;color:var(--muted);letter-spacing:2px}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip{font-size:10.5px;font-weight:700;letter-spacing:.6px;padding:4px 10px;
+    border-radius:999px;border:1px solid var(--panel-brd);color:var(--muted);
+    background:rgba(255,255,255,.04);white-space:nowrap}
+  .chip.ok{color:var(--green);border-color:rgba(34,197,94,.4)}
+  .chip.off{color:var(--muted);opacity:.7}
+  .chip.src-ai{color:#4ade80;border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.10)}
+  .chip.src-demo{color:var(--amber);border-color:rgba(245,158,11,.55);background:rgba(245,158,11,.10)}
+  .chip.src-none{color:var(--muted)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);
+    margin-right:6px;box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:pulse 1.6s infinite;vertical-align:1px}
+  .dot.g{background:var(--green);box-shadow:0 0 0 0 rgba(34,197,94,.7)}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(239,68,68,.5)}
+    70%{box-shadow:0 0 0 9px rgba(239,68,68,0)}100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}}
+  .hspace{flex:1}
+  .hmeta{text-align:right;font-size:11.5px;color:var(--muted);line-height:1.5}
+  .hmeta .clock{font-size:21px;font-weight:700;color:var(--txt)}
+
+  /* ---------- stat cards ---------- */
+  .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+  .card{position:relative;overflow:hidden;padding:15px 18px;border-radius:15px;
+    border:1px solid var(--panel-brd);background:var(--panel);backdrop-filter:blur(6px)}
+  .card .k{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.1px}
+  .card .v{font-size:30px;font-weight:800;margin-top:5px;line-height:1}
+  .card .s{font-size:11px;color:var(--muted);margin-top:6px}
+  .card .ic{position:absolute;right:12px;top:12px;font-size:24px;opacity:.45}
+  .card::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%}
+  .card.v1::after{background:var(--cyan)} .card.v2::after{background:var(--red)}
+  .card.v3::after{background:var(--green)} .card.v4::after{background:var(--amber)}
+  .card.v5::after{background:var(--purple)}
+
+  /* ---------- layout ---------- */
+  .grid{display:grid;grid-template-columns:1.9fr 1.1fr;gap:14px}
+  .panel{border:1px solid var(--panel-brd);background:var(--panel);
+    border-radius:16px;backdrop-filter:blur(6px);overflow:hidden}
+  .phead{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:11px 15px;border-bottom:1px solid var(--panel-brd);font-weight:700;font-size:13.5px}
+  .phead .tag{font-size:11px;color:var(--muted);font-weight:600}
+  .pbody{padding:14px}
+
+  /* video */
+  .videowrap{position:relative;background:#000;aspect-ratio:16/9;display:flex;
+    align-items:center;justify-content:center}
+  .videowrap video{width:100%;height:100%;object-fit:contain;background:#000}
+  .placeholder{text-align:center;color:var(--muted);padding:28px;font-size:13px;line-height:1.9}
+  .placeholder .big{font-size:44px;margin-bottom:6px}
+  .placeholder b{color:var(--txt)}
+  .scanline{position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(rgba(34,211,238,.05) 50%,transparent 50%);background-size:100% 4px}
+
+  /* control rows */
+  .uprow{display:flex;gap:9px;align-items:center;padding:11px 14px;
+    border-top:1px solid var(--panel-brd);flex-wrap:wrap}
+  .uprow.first{border-top:1px solid var(--panel-brd)}
+  .uprow + .uprow{border-top:none;padding-top:2px}
+  .btn{border:1px solid var(--panel-brd);background:rgba(59,130,246,.14);
+    color:var(--txt);padding:8px 14px;border-radius:10px;font-weight:600;
+    cursor:pointer;font-size:12.5px;transition:.15s;white-space:nowrap}
+  .btn:hover{background:rgba(59,130,246,.28)}
+  .btn.ghost{background:transparent}
+  .btn.warn{background:rgba(239,68,68,.16)}
+  .btn.warn:hover{background:rgba(239,68,68,.3)}
+  .btn.tiny{padding:5px 10px;font-size:11px;color:var(--muted)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  input[type=file]{color:var(--muted);font-size:12px;max-width:215px}
+  .tin{background:rgba(255,255,255,.05);border:1px solid var(--panel-brd);
+    color:var(--txt);padding:8px 11px;border-radius:10px;font-size:12.5px}
+  select.tin{cursor:pointer}
+  select.tin option{background:#0b1220}
+  .progress{flex:1;min-width:150px;height:9px;border-radius:6px;
+    background:rgba(255,255,255,.08);overflow:hidden;display:none}
+  .progress > i{display:block;height:100%;width:0;border-radius:6px;
+    background:linear-gradient(90deg,var(--cyan),var(--blue));transition:width .3s}
+
+  /* analytics grid */
+  .anagrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .ablock{border:1px solid rgba(255,255,255,.06);border-radius:13px;padding:12px;background:rgba(255,255,255,.015)}
+  .ablock h4{font-size:11px;color:var(--muted);text-transform:uppercase;
+    letter-spacing:1.2px;margin-bottom:10px;font-weight:700}
+  .charts{display:flex;gap:16px;align-items:center}
+  .donut{width:150px;height:150px;border-radius:50%;flex:0 0 auto;
+    background:conic-gradient(#334155 0 100%);position:relative;transition:1s}
+  .donut::after{content:"";position:absolute;inset:19px;border-radius:50%;background:#0c1322}
+  .donut .center{position:absolute;inset:0;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;z-index:2}
+  .donut .center b{font-size:26px} .donut .center span{font-size:10px;color:var(--muted)}
+  .legend{display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+  .legrow{display:flex;align-items:center;gap:9px;font-size:12px}
+  .legrow .sw{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+  .legrow .nm{flex:1;min-width:0}
+  .legrow .ct{font-weight:700;text-align:right}
+  .legrow .ct .sub{font-size:9.5px;color:var(--muted);font-weight:400}
+  .bar{height:6px;border-radius:4px;background:rgba(255,255,255,.07);margin-top:3px;overflow:hidden}
+  .bar > i{display:block;height:100%;border-radius:4px;transition:width .8s}
+  canvas.chart{width:100%;height:150px;display:block}
+  .insights{display:flex;flex-direction:column;gap:8px;font-size:12.5px;line-height:1.5}
+  .insights .irow{display:flex;gap:9px;align-items:flex-start;padding:7px 10px;
+    border-radius:10px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.05)}
+  .insights .irow .ie{flex:0 0 auto}
+  .insights b{color:#fff}
+
+  /* right column tabs */
+  .tabs{display:flex;gap:4px}
+  .tab{padding:6px 13px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;
+    color:var(--muted);border:1px solid transparent}
+  .tab.on{color:var(--txt);background:rgba(59,130,246,.15);border-color:var(--panel-brd)}
+
+  /* feed */
+  .feed{max-height:560px;overflow-y:auto;padding:10px}
+  .feed::-webkit-scrollbar,{width:8px}
+  .feed::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+  .vrow{display:flex;gap:11px;align-items:center;padding:9px 10px;border-radius:12px;
+    border:1px solid transparent;cursor:pointer;transition:.15s}
+  .vrow:hover{background:rgba(255,255,255,.05);border-color:var(--panel-brd)}
+  .vrow .thumb{width:64px;height:44px;border-radius:8px;object-fit:cover;flex:0 0 auto;
+    border:1px solid var(--panel-brd);background:#0a0f1c}
+  .vrow .thumb.ph{display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--muted)}
+  .vrow .mid{flex:1;min-width:0}
+  .vrow .plate{font-weight:700;font-size:14px;letter-spacing:1px}
+  .vrow .plate.unk{color:var(--muted);font-weight:600}
+  .vrow .sub{font-size:10.5px;color:var(--muted);margin-top:2px;white-space:nowrap;
+    overflow:hidden;text-overflow:ellipsis}
+  .badge{font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:999px;
+    white-space:nowrap;text-transform:uppercase;letter-spacing:.5px}
+  .vrow .fine{font-weight:700;font-size:12.5px;color:var(--amber)}
+  .newflash{animation:flash 1.4s ease-out}
+  @keyframes flash{0%{background:rgba(239,68,68,.35)}100%{background:transparent}}
+  .empty{padding:34px 20px;text-align:center;color:var(--muted);font-size:12.5px;line-height:1.8}
+  .empty .big{font-size:34px}
+
+  /* vehicles (ANPR) table */
+  .vtable{width:100%;border-collapse:collapse;font-size:12px}
+  .vtable th{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;
+    text-align:left;padding:8px 10px;border-bottom:1px solid var(--panel-brd);position:sticky;top:0;background:#0c1322}
+  .vtable td{padding:7px 10px;border-bottom:1px solid rgba(255,255,255,.04)}
+  .platechip{display:inline-block;background:#fff;color:#111;font-weight:800;
+    font-family:ui-monospace,Consolas,monospace;font-size:11.5px;letter-spacing:1px;
+    padding:2px 8px;border-radius:4px;border:2px solid #111;box-shadow:0 0 0 1px #fff}
+  .confbar{width:54px;height:6px;border-radius:4px;background:rgba(255,255,255,.08);
+    display:inline-block;vertical-align:middle;overflow:hidden;margin-right:6px}
+  .confbar i{display:block;height:100%;background:var(--green)}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(3,7,15,.75);backdrop-filter:blur(4px);
+    display:none;align-items:center;justify-content:center;z-index:50;padding:20px}
+  .overlay.on{display:flex}
+  .challan{width:min(820px,96vw);max-height:92vh;overflow:auto;border-radius:18px;
+    border:1px solid var(--panel-brd);background:linear-gradient(180deg,#0e1626,#0b1120)}
+  .chead{display:flex;justify-content:space-between;align-items:center;padding:15px 20px;
+    border-bottom:1px solid var(--panel-brd)}
+  .chead .t{font-weight:800;font-size:15px;letter-spacing:.5px}
+  .chead .close{cursor:pointer;font-size:22px;color:var(--muted);line-height:1}
+  .cbody{display:grid;grid-template-columns:1.15fr 1fr;gap:18px;padding:20px}
+  .cbody img.snap{width:100%;border-radius:12px;border:1px solid var(--panel-brd)}
+  .cbody img.pcrop{max-width:200px;border-radius:6px;border:1px solid var(--panel-brd);margin-top:10px}
+  .kv{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px dashed rgba(255,255,255,.09);font-size:13.5px}
+  .kv .lab{color:var(--muted)} .kv .val{font-weight:700;text-align:right}
+  .cfoot{display:flex;gap:10px;justify-content:flex-end;padding:0 20px 20px}
+  .stamp{display:inline-block;border:2px solid var(--red);color:var(--red);
+    padding:3px 10px;border-radius:8px;font-weight:800;transform:rotate(-6deg);font-size:12px}
+  .paid{border-color:var(--green);color:var(--green)}
+
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:#0e1626;border:1px solid var(--panel-brd);padding:12px 20px;
+    border-radius:12px;font-size:13px;opacity:0;transition:.3s;z-index:60;pointer-events:none}
+  .toast.on{opacity:1}
+
+  @media print{
+    body > *{display:none !important}
+    .overlay.on{display:block !important;position:static;background:#fff;padding:0}
+    .challan{background:#fff;color:#000;border:2px solid #000;width:100%;max-height:none}
+    .challan .kv .lab{color:#333}
+    .chead .close,.cfoot .btn{display:none}
+  }
+  @media(max-width:1100px){.cards{grid-template-columns:repeat(2,1fr)}
+    .grid,.anagrid{grid-template-columns:1fr}.cbody{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="logo">🚦</span>
+    <div>AI SMART TRAFFIC INTELLIGENCE
+      <small>REAL-TIME VIOLATION DETECTION · ANPR · E-CHALLAN &nbsp;|&nbsp; SRI LANKA</small>
+    </div>
+  </div>
+  <div class="chips" id="chips">
+    <span class="chip src-none" id="chip-src">○ NO DATA YET</span>
+    <span class="chip" id="chip-veh">YOLOv8 + ByteTrack</span>
+    <span class="chip" id="chip-helmet">HELMET AI</span>
+    <span class="chip" id="chip-plate">ANPR</span>
+    <span class="chip" id="chip-speedcal" title="Per-video speed calibration">SPEED CAL</span>
+    <span class="chip" id="chip-alerts" title="Police email alerts">📧 ALERTS</span>
+    <span class="chip" id="chip-dev">—</span>
+  </div>
+  <div class="hspace"></div>
+  <div class="hmeta">
+    <div class="clock" id="clock">--:--:--</div>
+    <div>📍 <span id="loc">—</span>
+      <span id="editloc" title="Set camera location (auto-detected from video GPS when available)"
+        style="cursor:pointer;opacity:.7">✎</span> · <span id="pat">standby</span></div>
+  </div>
+</header>
+
+<section class="cards">
+  <div class="card v1"><div class="ic">🚗</div><div class="k">Vehicles Tracked</div>
+    <div class="v" id="c-veh">0</div><div class="s">unique ByteTrack IDs</div></div>
+  <div class="card v2"><div class="ic">⚠️</div><div class="k">Violations Detected</div>
+    <div class="v" id="c-vio">0</div><div class="s" id="c-vio-s">verified over multiple frames</div></div>
+  <div class="card v3"><div class="ic">🔢</div><div class="k">Plates Recognised</div>
+    <div class="v" id="c-plate">0</div><div class="s" id="c-plate-s">two-stage ANPR + OCR</div></div>
+  <div class="card v4"><div class="ic">⛑</div><div class="k">No-Helmet Riders</div>
+    <div class="v" id="c-hel">0</div><div class="s">moving riders only — parked bikes excluded</div></div>
+  <div class="card v5"><div class="ic">💰</div><div class="k">Fines Issued</div>
+    <div class="v" id="c-fine">Rs. 0</div><div class="s">e-challans auto-generated</div></div>
+</section>
+
+<div class="grid">
+  <!-- LEFT -->
+  <div style="display:flex;flex-direction:column;gap:14px">
+    <div class="panel">
+      <div class="phead">📹 Camera 14 — Annotated AI Feed
+        <span class="tag" id="vidtag">no processed video yet</span></div>
+      <div class="videowrap" id="videowrap">
+        <img id="liveimg" alt="live feed"
+             style="display:none;width:100%;height:100%;object-fit:contain;background:#000" />
+        <div class="placeholder" id="vidph">
+          <div class="big">🎞️</div>
+          <div><b>Upload a clip</b>, run a <b>sample</b>, paste a <b>URL</b>, or go <b>LIVE</b> from a camera.<br>
+          Every box, plate and violation you'll see is a real model output.</div>
+        </div>
+        <div class="scanline"></div>
+        <div id="livebadge" style="display:none;position:absolute;left:12px;top:12px;
+          background:rgba(239,68,68,.92);color:#fff;font-size:11px;font-weight:700;
+          padding:4px 10px;border-radius:999px;letter-spacing:.5px">● LIVE CAMERA</div>
+        <div id="prevbadge" style="display:none;position:absolute;left:12px;top:12px;
+          background:rgba(34,211,238,.92);color:#04121a;font-size:11px;font-weight:800;
+          padding:4px 10px;border-radius:999px;letter-spacing:.5px">🔎 ANALYZING — LIVE AI VIEW</div>
+      </div>
+      <div class="uprow first">
+        <input type="file" id="file" accept="video/*" />
+        <button class="btn" id="analyze">▶ Analyze Video</button>
+        <select class="tin" id="sample" style="max-width:190px"><option value="">— sample clips —</option></select>
+        <button class="btn ghost" id="runSample">▶ Run Sample</button>
+        <button class="btn warn" id="playLive" title="Play this clip like a live CCTV feed — detections, plates and violations land in real time as it plays (once, no loop)">🎬 Play Live</button>
+        <select class="tin" id="speedmode" title="Analysis speed: every Nth frame is analyzed — output video stays full length">
+          <option value="1">🐢 Accurate (every frame)</option>
+          <option value="2" selected>⚡ Fast (2x)</option>
+          <option value="3">🚀 Turbo (3x)</option>
+        </select>
+        <button class="btn ghost tiny" id="calibrate" title="Click 4 road points on a sample clip to enable real speed measurement">🎯 Speed setup</button>
+      </div>
+      <div class="uprow">
+        <input type="text" id="url" placeholder="Paste YouTube / video URL…" class="tin" style="flex:1;min-width:170px" />
+        <button class="btn" id="analyzeUrl">🔗 Analyze URL</button>
+        <input type="text" id="camsrc" value="0" class="tin" style="width:110px"
+          title="0 = default webcam · or 1,2… · or rtsp://… / http://…" />
+        <button class="btn warn" id="golive">📹 Go Live</button>
+        <button class="btn ghost" id="stoplive" disabled>⏹ Stop</button>
+      </div>
+      <div class="uprow">
+        <div class="progress" id="prog"><i id="progbar"></i></div>
+        <span id="progtxt" style="font-size:12px;color:var(--muted);flex:1"></span>
+        <button class="btn tiny ghost" id="seed" title="Loads clearly-badged SIMULATED data as a presentation fallback">✨ Demo data (simulated)</button>
+        <button class="btn tiny ghost" id="clearall">🗑 Clear</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="phead">📊 Violation Analytics <span class="tag" id="anatag"></span></div>
+      <div class="pbody anagrid">
+        <div class="ablock">
+          <h4>By type</h4>
+          <div class="charts">
+            <div class="donut" id="donut">
+              <div class="center"><b id="donut-total">0</b><span>violations</span></div>
+            </div>
+            <div class="legend" id="legend"></div>
+          </div>
+        </div>
+        <div class="ablock">
+          <h4 id="tl-title">Timeline — when violations happen</h4>
+          <canvas class="chart" id="timeline" width="520" height="170"></canvas>
+        </div>
+        <div class="ablock">
+          <h4>Hotspot map — where in the camera view</h4>
+          <canvas class="chart" id="hotspot" width="520" height="170"></canvas>
+        </div>
+        <div class="ablock">
+          <h4>AI insights — plain language</h4>
+          <div class="insights" id="insights">
+            <div class="irow"><span class="ie">🤖</span><span>Run a video and I'll summarise what the AI found here.</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel" style="display:flex;flex-direction:column;align-self:start">
+    <div class="phead">
+      <div class="tabs">
+        <span class="tab on" id="tab-vio">🚨 Violations <span id="feedcount"></span></span>
+        <span class="tab" id="tab-anpr">🚘 Vehicles · ANPR <span id="anprcount"></span></span>
+      </div>
+      <button class="btn tiny ghost" id="csv" title="Export current list as CSV">⬇ CSV</button>
+    </div>
+    <div id="pane-vio">
+      <div style="display:flex;gap:8px;padding:10px 12px;border-bottom:1px solid var(--panel-brd)">
+        <input id="q" placeholder="🔍 Search plate…" autocomplete="off" class="tin" style="flex:1;font-size:12px;padding:7px 10px" />
+        <select id="ftype" class="tin" style="font-size:12px;padding:7px 8px">
+          <option value="">All types</option>
+          <option>No Helmet</option>
+          <option>Red Light Jump</option>
+          <option>Over Speeding</option>
+          <option>Wrong Way</option>
+          <option>Triple Riding</option>
+        </select>
+      </div>
+      <div class="feed" id="feed"></div>
+    </div>
+    <div id="pane-anpr" style="display:none;max-height:640px;overflow-y:auto">
+      <table class="vtable">
+        <thead><tr><th>ID</th><th>Type</th><th>Number plate</th><th>Conf</th><th>Seen</th></tr></thead>
+        <tbody id="vbody"></tbody>
+      </table>
+      <div class="empty" id="vempty" style="display:none">
+        <div class="big">🚘</div>
+        Plates appear here for <b>every tracked vehicle</b> — not just violators.<br>
+        Run a clip where plates face the camera (≤ ~15 m works best).
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CHALLAN MODAL -->
+<div class="overlay" id="overlay">
+  <div class="challan" id="challan-card">
+    <div class="chead">
+      <div class="t">🧾 E-CHALLAN <span class="mono" id="ch-id" style="color:var(--muted)"></span></div>
+      <div class="close" id="closeModal">✕</div>
+    </div>
+    <div class="cbody">
+      <div>
+        <img class="snap" id="ch-img" alt="evidence" />
+        <div id="ch-pwrap" style="display:none">
+          <div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:1px">PLATE CROP (OCR INPUT)</div>
+          <img class="pcrop" id="ch-pimg" alt="plate" />
+        </div>
+      </div>
+      <div>
+        <div class="kv"><span class="lab">Vehicle No.</span><span class="val mono" id="ch-plate"></span></div>
+        <div class="kv"><span class="lab">Violation</span><span class="val" id="ch-type"></span></div>
+        <div class="kv"><span class="lab">Fine Amount</span><span class="val" id="ch-fine" style="color:var(--amber)"></span></div>
+        <div class="kv" id="ch-speed-row"><span class="lab">Recorded Speed</span><span class="val" id="ch-speed"></span></div>
+        <div class="kv"><span class="lab">Date & Time</span><span class="val" id="ch-time"></span></div>
+        <div class="kv" id="ch-vs-row"><span class="lab">Footage Time</span><span class="val" id="ch-vs"></span></div>
+        <div class="kv"><span class="lab">Location</span><span class="val" id="ch-loc"></span></div>
+        <div class="kv"><span class="lab">Plate Confidence</span><span class="val" id="ch-conf"></span></div>
+        <div class="kv"><span class="lab">Detection Source</span><span class="val" id="ch-src"></span></div>
+        <div style="margin-top:14px"><span class="stamp" id="ch-stamp">PENDING</span></div>
+      </div>
+    </div>
+    <div class="cfoot">
+      <button class="btn warn" id="sendPolice" title="Emails this challan + evidence + plate crop to the configured police address">📧 Send to Police</button>
+      <button class="btn ghost" id="pdfChallan">⬇ PDF Challan</button>
+      <button class="btn ghost" id="printChallan">🖨 Print</button>
+    </div>
+  </div>
+</div>
+
+<!-- VEHICLE / PLATE MODAL -->
+<div class="overlay" id="voverlay">
+  <div class="challan" style="width:min(560px,94vw)">
+    <div class="chead">
+      <div class="t">🚘 VEHICLE <span class="mono" id="vm-id" style="color:var(--muted)"></span></div>
+      <div class="close" id="vmClose">✕</div>
+    </div>
+    <div style="padding:20px">
+      <div style="text-align:center;margin-bottom:16px">
+        <div id="vm-platechip" class="platechip" style="font-size:22px;padding:6px 18px"></div>
+        <div id="vm-noplate" style="color:var(--muted);font-size:13px;display:none">
+          No confirmed plate for this vehicle — reads below the confidence bar are never shown.</div>
+      </div>
+      <div id="vm-imgwrap" style="text-align:center;display:none;margin-bottom:14px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">
+          PLATE AS CAPTURED BY CAMERA (OCR INPUT)</div>
+        <img id="vm-img" alt="plate crop" style="max-width:90%;border-radius:8px;
+          border:2px solid var(--panel-brd);image-rendering:pixelated;min-height:56px;background:#0a0f1c" />
+      </div>
+      <div class="kv"><span class="lab">Vehicle type</span><span class="val" id="vm-cls"></span></div>
+      <div class="kv"><span class="lab">Read confidence</span><span class="val" id="vm-conf"></span></div>
+      <div class="kv"><span class="lab">Confirmed reads</span><span class="val" id="vm-hits"></span></div>
+      <div class="kv"><span class="lab">Seen in footage</span><span class="val" id="vm-seen"></span></div>
+    </div>
+  </div>
+</div>
+
+<!-- SPEED CALIBRATION MODAL -->
+<div class="overlay" id="caloverlay">
+  <div class="challan" style="width:min(760px,96vw)">
+    <div class="chead">
+      <div class="t">🎯 SPEED CALIBRATION <span class="tag" id="cal-video"></span></div>
+      <div class="close" id="calClose">✕</div>
+    </div>
+    <div style="padding:16px 20px">
+      <div style="font-size:12.5px;color:var(--muted);line-height:1.7;margin-bottom:10px">
+        Click <b style="color:var(--txt)">4 corners of a road rectangle</b> in this order:
+        <b style="color:var(--cyan)">1 far-left → 2 far-right → 3 near-right → 4 near-left</b>,
+        then enter its real size in metres (lane width ≈ 3.5 m per lane; use lane
+        markings: gap+line ≈ 12 m in LK). Speed &amp; over-speed violations activate on the next run of this clip.
+      </div>
+      <canvas id="calcanvas" style="width:100%;border-radius:10px;border:1px solid var(--panel-brd);cursor:crosshair"></canvas>
+      <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
+        <label style="font-size:12px;color:var(--muted)">Width (m)
+          <input type="number" id="cal-w" value="25" class="tin" style="width:80px;margin-left:6px"></label>
+        <label style="font-size:12px;color:var(--muted)">Length (m)
+          <input type="number" id="cal-l" value="120" class="tin" style="width:80px;margin-left:6px"></label>
+        <span id="cal-count" style="font-size:12px;color:var(--cyan)">0 / 4 points</span>
+        <label style="font-size:12px;color:var(--muted)" title="Enables WRONG-WAY detection: vehicles moving against this direction get flagged. Use only on one-way approaches!">
+          Traffic flows
+          <select id="cal-dir" class="tin" style="margin-left:6px">
+            <option value="">— wrong-way off —</option>
+            <option value="0,1">↓ toward camera</option>
+            <option value="0,-1">↑ away from camera</option>
+            <option value="1,0">→ left to right</option>
+            <option value="-1,0">← right to left</option>
+          </select></label>
+        <div class="hspace" style="flex:1"></div>
+        <button class="btn ghost tiny" id="calReset">↺ Reset points</button>
+        <button class="btn" id="calSave">💾 Save calibration</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const API = "";                       // same-origin
+let META = {};                        // /api/stats payload
+let CUR = "Rs. ";
+let known = new Set();                // seen violation ids (for flash)
+let LIVE_ON = false;
+let VLIST = [];                       // current violations (for CSV/insights)
+let VEHS = [];                        // current vehicles list
+
+const COLORS = {
+  "No Helmet":"#f59e0b","Red Light Jump":"#ef4444","Over Speeding":"#a855f7",
+  "Wrong Way":"#3b82f6","Triple Riding":"#14b8a6"
+};
+const CLS_EMOJI = {Car:"🚗",Motorcycle:"🏍",Bus:"🚌",Truck:"🚚",Bicycle:"🚲"};
+
+function toast(msg){const t=$("#toast");t.textContent=msg;t.classList.add("on");
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("on"),2600);}
+function clock(){$("#clock").textContent=new Date().toLocaleTimeString('en-GB');}
+setInterval(clock,1000);clock();
+async function getJSON(u){const r=await fetch(API+u);if(!r.ok)throw new Error(r.status);return r.json();}
+function fmtTime(ts){if(!ts)return"—";const d=new Date(ts);
+  return isNaN(d)?ts:d.toLocaleTimeString('en-GB');}
+function fmtVS(s){if(s==null)return null;const m=Math.floor(s/60),ss=Math.floor(s%60);
+  return `${m}:${String(ss).padStart(2,"0")} into footage`;}
+function esc(x){return String(x==null?"":x).replace(/[&<>"]/g,
+  c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+
+/* animated count-up */
+function animate(el,to,prefix=""){
+  const from=parseInt((el.textContent||"0").replace(/[^\d]/g,""))||0;
+  if(from===to){el.textContent=prefix+to.toLocaleString('en-US');return;}
+  const steps=20;let i=0;
+  clearInterval(el._iv);
+  el._iv=setInterval(()=>{i++;const v=Math.round(from+(to-from)*i/steps);
+    el.textContent=prefix+v.toLocaleString('en-US');
+    if(i>=steps)clearInterval(el._iv);},18);
+}
+
+/* ---------- header chips ---------- */
+function renderChips(s){
+  const src=$("#chip-src");
+  if(s.data_source==="ai"){src.className="chip src-ai";src.innerHTML='<span class="dot g"></span>REAL AI RESULTS';}
+  else if(s.data_source==="demo"){src.className="chip src-demo";src.textContent="◆ SIMULATED DEMO DATA";}
+  else {src.className="chip src-none";src.textContent="○ NO DATA YET";}
+  $("#chip-helmet").className="chip "+(s.helmet_model?"ok":"off");
+  $("#chip-helmet").textContent="HELMET AI "+(s.helmet_model?"✓":"–");
+  $("#chip-plate").className="chip "+(s.plate_model?"ok":"off");
+  $("#chip-plate").textContent="ANPR "+(s.plate_model?"✓":"–");
+  $("#chip-speedcal").className="chip "+(s.speed_calibrated?"ok":"off");
+  $("#chip-speedcal").textContent="SPEED CAL "+(s.speed_calibrated?"✓":"–");
+  $("#chip-alerts").className="chip "+(s.alerts_enabled?"ok":"off");
+  $("#chip-alerts").textContent="📧 ALERTS "+(s.alerts_enabled?"✓":"–");
+  $("#chip-alerts").title=s.alerts_enabled
+    ?`Auto-emailing challans to ${s.alerts_to}${s.alerts_sent?` · ${s.alerts_sent} sent`:""}`
+    :"Set SMTP credentials in backend/config.py (ALERTS) to auto-email police";
+  $("#chip-dev").textContent=(s.device||"CPU")+" INFERENCE";
+  $("#chip-veh").className="chip ok";
+}
+
+/* ---------- stats + charts ---------- */
+function renderStats(s){
+  META=s;CUR=s.currency||"Rs. ";
+  renderChips(s);
+  $("#loc").textContent=s.location||"—";
+  $("#pat").textContent=s.processed_at?("updated "+fmtTime(s.processed_at)):"standby";
+  animate($("#c-veh"),s.vehicles||0);
+  animate($("#c-vio"),s.total_violations||0);
+  animate($("#c-hel"),s.no_helmet||0);
+  animate($("#c-plate"),s.plates_read||0);
+  animate($("#c-fine"),s.total_fines||0,CUR);
+  $("#c-vio-s").textContent=Object.keys(s.by_type||{}).length+" active categories";
+  $("#c-plate-s").textContent=(s.vehicle_rows||0)+" vehicles logged";
+
+  if(s.annotated_video && !LIVE_ON && !PREV_ON){
+    $("#vidtag").textContent="H.264 annotated output";
+    if(!$("#feedvideo")){
+      $("#vidph").style.display="none";
+      const v=document.createElement("video");
+      v.id="feedvideo";v.src=s.annotated_video+"?t="+Date.now();
+      v.controls=true;v.autoplay=true;v.loop=true;v.muted=true;
+      $("#videowrap").insertBefore(v,$("#videowrap").firstChild);
+    }
+  }
+  renderDonut(s.by_type||{},s.total_violations||0);
+}
+
+function renderDonut(byType,total){
+  $("#donut-total").textContent=total;
+  const entries=Object.entries(byType).sort((a,b)=>b[1].count-a[1].count);
+  let acc=0,stops=[];const leg=$("#legend");leg.innerHTML="";
+  const max=Math.max(1,...entries.map(e=>e[1].count));
+  for(const [type,info] of entries){
+    const col=COLORS[type]||"#64748b";
+    const frac=total? info.count/total*100 : 0;
+    stops.push(`${col} ${acc}% ${acc+frac}%`);acc+=frac;
+    const fineTxt=CUR+(info.fines||0).toLocaleString('en-US');
+    leg.insertAdjacentHTML("beforeend",
+      `<div class="legrow"><span class="sw" style="background:${col}"></span>
+        <span class="nm">${esc(type)}<div class="bar"><i style="width:${info.count/max*100}%;background:${col}"></i></div></span>
+        <span class="ct">${info.count}<div class="sub">${fineTxt}</div></span></div>`);
+  }
+  if(!stops.length)stops=["#334155 0 100%"];
+  $("#donut").style.background=`conic-gradient(${stops.join(",")})`;
+  $("#anatag").textContent=(META.data_source==="demo"?"simulated data · ":"")+entries.length+" violation types";
+}
+
+/* ---------- timeline chart (canvas, no libs) ---------- */
+function renderTimeline(list){
+  const cv=$("#timeline"),ctx=cv.getContext("2d");
+  ctx.clearRect(0,0,cv.width,cv.height);
+  const W=cv.width,H=cv.height,padL=30,padB=22,padT=12;
+  ctx.font="10px Segoe UI";ctx.fillStyle="#8b97ad";ctx.strokeStyle="rgba(255,255,255,.08)";
+  // bucket by video seconds when available, else by wall-clock minute
+  const useVS=list.some(v=>v.video_s!=null);
+  $("#tl-title").textContent=useVS?"Timeline — seconds into the footage":"Timeline — by wall-clock minute";
+  let buckets=new Map(),label=i=>i;
+  if(useVS){
+    const bs=10;                                     // 10-second buckets
+    let maxS=Math.max(...list.map(v=>v.video_s||0),10);
+    for(let t=0;t<=maxS;t+=bs)buckets.set(t/bs|0,0);
+    for(const v of list)if(v.video_s!=null)
+      buckets.set(v.video_s/bs|0,(buckets.get(v.video_s/bs|0)||0)+1);
+    label=i=>`${(i*bs/60|0)}:${String(i*bs%60).padStart(2,"0")}`;
+  }else{
+    for(const v of list){const k=(v.timestamp||"").slice(11,16);
+      if(k)buckets.set(k,(buckets.get(k)||0)+1);}
+    buckets=new Map([...buckets.entries()].sort());
+    label=k=>k;
+  }
+  const keys=[...buckets.keys()];
+  if(!keys.length){ctx.fillText("no events yet",W/2-30,H/2);return;}
+  const maxN=Math.max(...buckets.values(),1);
+  const bw=Math.max(3,(W-padL-8)/keys.length-2);
+  // y grid
+  for(let g=0;g<=maxN;g+=Math.max(1,Math.ceil(maxN/4))){
+    const y=H-padB-(H-padB-padT)*g/maxN;
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-4,y);ctx.stroke();
+    ctx.fillText(g,8,y+3);
+  }
+  keys.forEach((k,i)=>{
+    const n=buckets.get(k);
+    const x=padL+i*((W-padL-8)/keys.length);
+    const h=(H-padB-padT)*n/maxN;
+    const grd=ctx.createLinearGradient(0,H-padB-h,0,H-padB);
+    grd.addColorStop(0,"#22d3ee");grd.addColorStop(1,"#3b82f6");
+    ctx.fillStyle=n?grd:"rgba(255,255,255,.04)";
+    ctx.fillRect(x,H-padB-Math.max(h,n?3:1),bw,Math.max(h,n?3:1));
+    if(keys.length<=14||i%Math.ceil(keys.length/10)===0){
+      ctx.fillStyle="#8b97ad";ctx.fillText(label(k),x,H-8);}
+  });
+}
+
+/* ---------- hotspot map ---------- */
+function renderHotspot(list){
+  const cv=$("#hotspot"),ctx=cv.getContext("2d");
+  const W=cv.width,H=cv.height;
+  ctx.clearRect(0,0,W,H);
+  // camera-view frame + perspective grid for depth
+  ctx.strokeStyle="rgba(255,255,255,.10)";ctx.strokeRect(1,1,W-2,H-2);
+  ctx.beginPath();
+  for(let i=1;i<5;i++){const y=H*i/5;ctx.moveTo(0,y);ctx.lineTo(W,y);}
+  for(let i=1;i<8;i++){const x=W*i/8;ctx.moveTo(x,0);ctx.lineTo(x,H);}
+  ctx.stroke();
+  ctx.font="10px Segoe UI";ctx.fillStyle="#8b97ad";
+  ctx.fillText("camera view — each dot = one violation",8,14);
+  const fs=(META.frame_size&&META.frame_size[0])?META.frame_size:[1280,720];
+  let dots=0;
+  for(const v of list){
+    let b=v.box;if(typeof b==="string"){try{b=JSON.parse(b);}catch(e){b=null;}}
+    if(!b||b.length!==4)continue;
+    const cx=((b[0]+b[2])/2)/fs[0]*W, cy=((b[1]+b[3])/2)/fs[1]*H;
+    if(cx<0||cx>W||cy<0||cy>H)continue;
+    const col=COLORS[v.type]||"#94a3b8";
+    const g=ctx.createRadialGradient(cx,cy,1,cx,cy,11);
+    g.addColorStop(0,col);g.addColorStop(1,"transparent");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,11,0,7);ctx.fill();
+    ctx.fillStyle="#fff";ctx.beginPath();ctx.arc(cx,cy,1.6,0,7);ctx.fill();
+    dots++;
+  }
+  if(!dots)ctx.fillText("positions appear after a video run",W/2-80,H/2);
+}
+
+/* ---------- AI insights (plain-language, computed from real data) ---------- */
+function renderInsights(s,list){
+  const box=$("#insights");const out=[];
+  const total=s.total_violations||0;
+  if(s.data_source==="demo")
+    out.push(["🟡","<b>Simulated demo data</b> is loaded — run a real video for live AI results."]);
+  if(!total&&!(s.vehicle_rows||0)){
+    if(s.data_source!=="demo")out.push(["🤖","Run a video and I'll summarise what the AI found here."]);
+  }else{
+    const types=Object.entries(s.by_type||{}).sort((a,b)=>b[1].count-a[1].count);
+    if(types.length){
+      const [t,info]=types[0];
+      out.push(["📌",`<b>${esc(t)}</b> is the most common violation — <b>${info.count}</b> of ${total} (${Math.round(info.count/total*100)}%).`]);
+    }
+    if(s.vehicles&&total)
+      out.push(["📈",`<b>${(total/s.vehicles*100).toFixed(1)}%</b> of the ${s.vehicles} tracked vehicles committed a violation.`]);
+    if(s.plates_read!=null&&s.vehicle_rows)
+      out.push(["🔢",`Plates recognised for <b>${s.plates_read}</b> of ${s.vehicle_rows} logged vehicles${s.plates_read?` — challans can be served automatically.`:` — bring the camera closer for readable plates.`}`]);
+    // peak bucket from video_s
+    const vs=list.filter(v=>v.video_s!=null);
+    if(vs.length>=3){
+      const b=new Map();for(const v of vs)b.set(v.video_s/10|0,(b.get(v.video_s/10|0)||0)+1);
+      const [bk,bn]=[...b.entries()].sort((a,c)=>c[1]-a[1])[0];
+      if(bn>=2)out.push(["⏱",`Busiest moment: <b>${fmtVS(bk*10)}</b> (${bn} violations within 10 s).`]);
+    }
+    if(s.avg_over_speed)
+      out.push(["🏎",`Average speed among speeders: <b>${s.avg_over_speed} km/h</b> in a ${s.speed_limit||60} km/h zone.`]);
+    if((s.repeat_offenders||[]).length){
+      const r=s.repeat_offenders[0];
+      out.push(["🔁",`<b>${s.repeat_offenders.length}</b> repeat offender${s.repeat_offenders.length>1?"s":""} — ${esc(r.plate)} has ${r.n} violations (${CUR}${(r.f||0).toLocaleString('en-US')}).`]);
+    }
+    const unk=list.filter(v=>!v.plate||v.plate==="UNKNOWN").length;
+    if(total&&unk&&s.data_source==="ai")
+      out.push(["🛈",`${unk} challan${unk>1?"s":""} pending manual plate review (plate too far / unreadable — never guessed).`]);
+  }
+  box.innerHTML=out.map(([e,t])=>`<div class="irow"><span class="ie">${e}</span><span>${t}</span></div>`).join("")
+    ||'<div class="irow"><span class="ie">🤖</span><span>Run a video and I\'ll summarise what the AI found here.</span></div>';
+}
+
+/* ---------- violations feed ---------- */
+function renderFeed(list){
+  $("#feedcount").textContent=list.length?`(${list.length})`:"";
+  const feed=$("#feed");
+  if(!list.length){
+    feed.innerHTML=`<div class="empty"><div class="big">✅</div>
+      No violations${META.data_source==="ai"?" detected in this footage":" yet"}.<br>
+      Upload a clip or go live to start detection.</div>`;
+    return;
+  }
+  const frag=document.createDocumentFragment();
+  for(const v of list){
+    const col=COLORS[v.type]||"#64748b";
+    const isNew=!known.has(v.id);
+    const row=document.createElement("div");
+    row.className="vrow"+(isNew?" newflash":"");
+    row.onclick=()=>openChallan(v);
+    const unk=!v.plate||v.plate==="UNKNOWN";
+    const thumb=v.snapshot_url
+      ?`<img class="thumb" loading="lazy" src="${v.snapshot_url}" alt="">`
+      :`<div class="thumb ph">📷</div>`;
+    row.innerHTML=`${thumb}
+      <div class="mid">
+        <div class="plate mono ${unk?"unk":""}">${unk?"PLATE UNREADABLE":esc(v.plate)}</div>
+        <div class="sub">${fmtTime(v.timestamp)}${v.video_s!=null?` · ${fmtVS(v.video_s)}`:""}
+          · <span style="color:${col}">${esc(v.type)}</span>${v.speed_kmph?(" · "+v.speed_kmph+" km/h"):""}</div>
+      </div>
+      <div style="text-align:right">
+        <span class="badge" style="background:${col}22;color:${col}">${esc(v.type)}</span>
+        <div class="fine">${CUR}${(v.fine||0).toLocaleString('en-US')}</div>
+      </div>`;
+    frag.appendChild(row);
+  }
+  feed.innerHTML="";feed.appendChild(frag);
+  for(const v of list)known.add(v.id);
+}
+
+/* ---------- vehicles / ANPR pane ---------- */
+function renderVehicles(list){
+  $("#anprcount").textContent=list.length?`(${list.length})`:"";
+  const tb=$("#vbody");tb.innerHTML="";
+  $("#vempty").style.display=list.length?"none":"block";
+  for(const v of list){
+    const has=v.plate&&v.plate!=="UNKNOWN";
+    const conf=v.plate_conf?Math.min(v.plate_conf,1):0;
+    const tr=document.createElement("tr");
+    tr.style.cursor="pointer";
+    tr.title="Click to view the captured plate image";
+    tr.onclick=()=>openVehicle(v);
+    tr.innerHTML=`
+      <td class="mono">#${v.track_id}</td>
+      <td>${CLS_EMOJI[v.cls]||"🚗"} ${esc(v.cls||"")}</td>
+      <td>${has?`<span class="platechip">${esc(v.plate)}</span>`
+        :`<span style="color:var(--muted);font-size:10.5px;font-style:italic">${esc(v.plate_note||"—")}</span>`}</td>
+      <td>${has?`<span class="confbar"><i style="width:${conf*100}%"></i></span>${Math.round(conf*100)}%${v.plate_hits>1?` <span style="color:var(--green);font-size:10px">×${v.plate_hits}</span>`:""}`:""}</td>
+      <td style="color:var(--muted)">${v.last_seen!=null?esc(v.last_seen)+"s":""}</td>`;
+    tb.appendChild(tr);
+  }
+}
+
+/* ---------- vehicle / plate-image modal ---------- */
+function openVehicle(v){
+  const has=v.plate&&v.plate!=="UNKNOWN";
+  $("#vm-id").textContent="#"+v.track_id;
+  $("#vm-platechip").style.display=has?"inline-block":"none";
+  $("#vm-platechip").textContent=v.plate||"";
+  $("#vm-noplate").style.display=has?"none":"block";
+  const iw=$("#vm-imgwrap");
+  if(v.plate_img_url){iw.style.display="block";$("#vm-img").src=v.plate_img_url+"?t="+Date.now();}
+  else iw.style.display="none";
+  $("#vm-cls").textContent=(CLS_EMOJI[v.cls]||"")+" "+(v.cls||"—");
+  $("#vm-conf").textContent=v.plate_conf?Math.round(Math.min(v.plate_conf,1)*100)+"%":"—";
+  $("#vm-hits").textContent=v.plate_hits?`${v.plate_hits} matching read${v.plate_hits>1?"s":""}`:"—";
+  $("#vm-seen").textContent=(v.first_seen!=null&&v.last_seen!=null)?`${v.first_seen}s → ${v.last_seen}s`:"—";
+  $("#voverlay").classList.add("on");
+}
+$("#vmClose").onclick=()=>$("#voverlay").classList.remove("on");
+$("#voverlay").onclick=e=>{if(e.target===$("#voverlay"))$("#voverlay").classList.remove("on");};
+
+/* ---------- challan modal ---------- */
+let CURV=null;                        // violation shown in the modal
+function openChallan(v){
+  CURV=v;
+  $("#ch-id").textContent=v.challan_id||"";
+  const unk=!v.plate||v.plate==="UNKNOWN";
+  $("#ch-plate").textContent=unk?"UNREADABLE":v.plate;
+  $("#ch-type").textContent=v.type;
+  $("#ch-fine").textContent=CUR+(v.fine||0).toLocaleString('en-US');
+  $("#ch-time").textContent=fmtTime(v.timestamp)+" · "+(v.timestamp?v.timestamp.slice(0,10):"");
+  const vsr=$("#ch-vs-row");
+  if(v.video_s!=null){vsr.style.display="";$("#ch-vs").textContent=fmtVS(v.video_s);}
+  else vsr.style.display="none";
+  $("#ch-loc").textContent=v.location||META.location||"—";
+  $("#ch-conf").textContent=v.plate_conf?Math.round(Math.min(v.plate_conf,1)*100)+"%":"—";
+  $("#ch-src").textContent=v.source==="demo"?"SIMULATED (demo)":"AI detection";
+  $("#ch-src").style.color=v.source==="demo"?"var(--amber)":"var(--green)";
+  const sr=$("#ch-speed-row");
+  if(v.speed_kmph){sr.style.display="";$("#ch-speed").textContent=v.speed_kmph+" km/h (limit "+(META.speed_limit||60)+")";}
+  else sr.style.display="none";
+  const stamp=$("#ch-stamp");stamp.textContent=v.status;
+  stamp.className="stamp"+(v.status==="PAID"?" paid":"");
+  const img=$("#ch-img");
+  if(v.snapshot_url){img.src=v.snapshot_url;img.style.display="";}
+  else{img.style.display="none";}
+  if(v.plate_img_url){$("#ch-pwrap").style.display="";$("#ch-pimg").src=v.plate_img_url;}
+  else $("#ch-pwrap").style.display="none";
+  $("#overlay").classList.add("on");
+}
+$("#closeModal").onclick=()=>$("#overlay").classList.remove("on");
+$("#overlay").onclick=e=>{if(e.target===$("#overlay"))$("#overlay").classList.remove("on");};
+document.addEventListener("keydown",e=>{if(e.key==="Escape")
+  ["#overlay","#voverlay","#caloverlay"].forEach(s=>$(s).classList.remove("on"));});
+$("#printChallan").onclick=()=>window.print();
+$("#pdfChallan").onclick=()=>{if(CURV)window.open("/api/violations/"+CURV.id+"/pdf","_blank");};
+$("#sendPolice").onclick=async()=>{
+  if(!CURV)return;
+  const b=$("#sendPolice");b.disabled=true;b.textContent="📧 Sending…";
+  try{
+    const r=await fetch(API+"/api/violations/"+CURV.id+"/alert",{method:"POST"});
+    const j=await r.json();
+    if(r.ok){toast("Alert emailed ✔ "+(j.detail||""));}
+    else toast("Email failed: "+(j.detail||r.status));
+  }catch(e){toast("Email failed: "+e.message);}
+  b.disabled=false;b.textContent="📧 Send to Police";
+};
+
+/* ---------- CSV export ---------- */
+$("#csv").onclick=()=>{
+  const anpr=$("#pane-anpr").style.display!=="none";
+  let rows,head,name;
+  if(anpr){
+    head=["track_id","class","plate","confidence","first_seen_s","last_seen_s"];
+    rows=VEHS.map(v=>[v.track_id,v.cls,v.plate||"",v.plate_conf||"",v.first_seen,v.last_seen]);
+    name="anpr_vehicles.csv";
+  }else{
+    head=["challan_id","type","plate","plate_conf","speed_kmph","fine","timestamp","video_s","location","status","source"];
+    rows=VLIST.map(v=>[v.challan_id,v.type,v.plate,v.plate_conf,v.speed_kmph||"",v.fine,v.timestamp,v.video_s??"",v.location,v.status,v.source||"ai"]);
+    name="violations.csv";
+  }
+  if(!rows.length){toast("Nothing to export yet");return;}
+  const csv=[head,...rows].map(r=>r.map(c=>`"${String(c??"").replace(/"/g,'""')}"`).join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));
+  a.download=name;a.click();URL.revokeObjectURL(a.href);
+  toast("Exported "+name);
+};
+
+/* ---------- tabs ---------- */
+function setTab(anpr){
+  $("#tab-vio").classList.toggle("on",!anpr);
+  $("#tab-anpr").classList.toggle("on",anpr);
+  $("#pane-vio").style.display=anpr?"none":"";
+  $("#pane-anpr").style.display=anpr?"":"none";
+}
+$("#tab-vio").onclick=()=>setTab(false);
+$("#tab-anpr").onclick=()=>setTab(true);
+
+/* ---------- refresh loop ---------- */
+let FT={q:"",type:""};
+async function refresh(){
+  try{
+    const p=new URLSearchParams({limit:"300"});
+    if(FT.q)p.set("plate",FT.q);
+    if(FT.type)p.set("type",FT.type);
+    const [s,v,veh]=await Promise.all([
+      getJSON("/api/stats"),
+      getJSON("/api/violations?"+p.toString()),
+      getJSON("/api/vehicles"),
+    ]);
+    VLIST=v;VEHS=veh;
+    renderStats(s);renderFeed(v);renderVehicles(veh);
+    renderTimeline(v);renderHotspot(v);renderInsights(s,v);
+  }catch(e){/* server not ready yet */}
+}
+$("#q").oninput=e=>{FT.q=e.target.value.trim();refresh();};
+$("#ftype").onchange=e=>{FT.type=e.target.value;refresh();};
+
+/* ---------- actions ---------- */
+$("#seed").onclick=async()=>{
+  if(!confirm("Load SIMULATED demo data?\n\nIt is clearly badged as simulated and replaces current results."))return;
+  toast("Generating simulated demo data…");
+  try{await fetch(API+"/api/seed",{method:"POST"});known.clear();
+    const fv=$("#feedvideo");if(fv)fv.remove();
+    await refresh();toast("Simulated data loaded (badged in header)");}
+  catch(e){toast("Seed failed: "+e.message);}
+};
+
+$("#clearall").onclick=async()=>{
+  if(!confirm("Clear ALL results and evidence?"))return;
+  try{await fetch(API+"/api/reset",{method:"POST"});known.clear();
+    const fv=$("#feedvideo");if(fv)fv.remove();
+    $("#vidph").style.display="";$("#vidtag").textContent="no processed video yet";
+    await refresh();toast("Cleared");}
+  catch(e){toast("Clear failed: "+e.message);}
+};
+
+function jobStarted(){known.clear();$("#prog").style.display="block";}
+function speedEvery(){return parseInt($("#speedmode").value)||2;}
+
+/* live AI view while a job is processing (MJPEG of annotated frames) */
+let PREV_ON=false;
+function showPreview(on){
+  if(on===PREV_ON)return;
+  PREV_ON=on;
+  let img=$("#previmg");
+  const fv=$("#feedvideo");
+  if(on){
+    $("#vidph").style.display="none";if(fv)fv.style.display="none";
+    if(!img){
+      img=document.createElement("img");
+      img.id="previmg";
+      img.style.cssText="width:100%;height:100%;object-fit:contain;background:#000";
+      img.onerror=()=>{ // MJPEG dropped (model still loading) — reconnect
+        if(PREV_ON)setTimeout(()=>{if(PREV_ON)img.src=API+"/api/preview.mjpg?t="+Date.now();},1500);
+      };
+      $("#videowrap").insertBefore(img,$("#videowrap").firstChild);
+    }
+    img.src=API+"/api/preview.mjpg?t="+Date.now();img.style.display="block";
+    $("#prevbadge").style.display="block";
+    $("#vidtag").textContent="live AI analysis in progress";
+  }else{
+    if(img){img.src="";img.remove();}
+    $("#prevbadge").style.display="none";
+    if(fv)fv.style.display="";
+  }
+}
+
+/* editable camera location (auto-detects from video GPS when present) */
+$("#editloc").onclick=async()=>{
+  const cur=$("#loc").textContent==="—"?"":$("#loc").textContent;
+  const v=prompt("Camera location shown on challans & evidence.\nLeave EMPTY to auto-detect from video GPS metadata.",cur);
+  if(v===null)return;
+  try{
+    await fetch(API+"/api/location",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({location:v})});
+    toast(v?"Location set ✔":"Location override cleared — auto-detect on next run");
+    refresh();
+  }catch(e){toast("Failed: "+e.message);}
+};
+
+$("#analyze").onclick=async()=>{
+  const f=$("#file").files[0];
+  if(!f){toast("Choose a video file first");return;}
+  const fd=new FormData();fd.append("file",f);fd.append("every",speedEvery());
+  $("#analyze").disabled=true;jobStarted();
+  $("#progtxt").textContent="uploading…";
+  try{
+    const r=await fetch(API+"/api/process",{method:"POST",body:fd});
+    const {job_id}=await r.json();
+    poll(job_id,"#analyze");
+  }catch(e){toast("Upload failed: "+e.message);$("#analyze").disabled=false;}
+};
+
+$("#runSample").onclick=async()=>{
+  const name=$("#sample").value;
+  if(!name){toast("Pick a sample clip first");return;}
+  $("#runSample").disabled=true;jobStarted();
+  $("#progtxt").textContent="starting "+name+"…";
+  try{
+    const r=await fetch(API+"/api/process_local",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({name,every:speedEvery()})});
+    const {job_id}=await r.json();
+    poll(job_id,"#runSample");
+  }catch(e){toast("Failed: "+e.message);$("#runSample").disabled=false;}
+};
+
+async function poll(job, btnSel="#analyze"){
+  try{
+    const j=await getJSON("/api/process/"+job);
+    if(j.status==="downloading"){
+      $("#progbar").style.width="8%";
+      $("#progtxt").textContent="downloading video…";
+      setTimeout(()=>poll(job,btnSel),900);return;
+    }
+    if(j.status==="processing"||j.status==="queued"){
+      $("#progbar").style.width=(j.progress||0)+"%";
+      $("#progtxt").textContent=j.status==="queued"?"starting AI…"
+        :`analyzing ${j.current||0}/${j.total||"?"} frames (${j.progress||0}%)`;
+      if(!LIVE_ON)showPreview(true);            // watch the AI work live
+      await refresh();                       // feed grows live as violations land
+      setTimeout(()=>poll(job,btnSel),900);
+    }else if(j.status==="done"){
+      showPreview(false);
+      $("#progbar").style.width="100%";
+      const s=j.summary||{};
+      $("#progtxt").textContent=`done · ${s.violations??0} violations · ${s.vehicles??0} vehicles · ${s.plates??0} plates read`;
+      $(btnSel).disabled=false;
+      const fv=$("#feedvideo");if(fv)fv.remove();  // reload fresh annotated video
+      await refresh();toast("Analysis complete ✔");
+      setTimeout(()=>{$("#prog").style.display="none";},4000);
+    }else{
+      showPreview(false);
+      $("#progtxt").textContent="error: "+(j.error||"unknown");
+      $(btnSel).disabled=false;
+      toast("Processing error — check the server console");
+    }
+  }catch(e){$(btnSel).disabled=false;}
+}
+
+/* ---------- analyze from URL (YouTube etc.) ---------- */
+$("#analyzeUrl").onclick=async()=>{
+  const url=$("#url").value.trim();
+  if(!url){toast("Paste a video URL first");return;}
+  $("#analyzeUrl").disabled=true;jobStarted();
+  $("#progtxt").textContent="downloading…";
+  try{
+    const r=await fetch(API+"/api/process_url",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({url,every:speedEvery()})});
+    const {job_id}=await r.json();poll(job_id,"#analyzeUrl");
+  }catch(e){toast("URL failed: "+e.message);$("#analyzeUrl").disabled=false;}
+};
+
+/* ---------- live camera ---------- */
+function showLive(on){
+  LIVE_ON=on;
+  const img=$("#liveimg"),fv=$("#feedvideo");
+  if(on){
+    $("#vidph").style.display="none";if(fv)fv.style.display="none";
+    img.src=API+"/api/live.mjpg?t="+Date.now();img.style.display="block";
+    $("#livebadge").style.display="block";$("#vidtag").textContent="live camera stream";
+    $("#golive").disabled=true;$("#stoplive").disabled=false;
+  }else{
+    img.style.display="none";img.src="";$("#livebadge").style.display="none";
+    if(fv)fv.style.display="";
+    $("#golive").disabled=false;$("#stoplive").disabled=true;
+  }
+}
+
+async function startLive(source,label){
+  toast("Starting "+label+"…");
+  try{
+    const r=await fetch(API+"/api/live/start",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({source})});
+    const j=await r.json();
+    if(j.status==="error"){toast("Error: "+(j.error||""));return;}
+    known.clear();showLive(true);await refresh();liveWatch();
+  }catch(e){toast("Live failed: "+e.message);}
+}
+$("#golive").onclick=()=>startLive($("#camsrc").value.trim()||"0","live camera");
+$("#playLive").onclick=()=>{
+  const name=$("#sample").value;
+  if(!name){toast("Pick a sample clip first");return;}
+  startLive("sample:"+name,"real-time playback of "+name.slice(0,24));
+};
+
+$("#stoplive").onclick=async()=>{
+  try{await fetch(API+"/api/live/stop",{method:"POST"});}catch(e){}
+  showLive(false);toast("Live stopped");
+};
+
+async function liveWatch(){
+  try{
+    const s=await getJSON("/api/live/status");
+    if(s.status==="error"){showLive(false);toast("Camera error: "+(s.error||""));return;}
+    if(s.status==="live"||s.status==="starting"){setTimeout(liveWatch,2500);}
+    else{showLive(false);}
+  }catch(e){setTimeout(liveWatch,2500);}
+}
+
+/* ---------- samples dropdown ---------- */
+async function loadSamples(){
+  try{
+    const names=await getJSON("/api/samples");
+    const sel=$("#sample");
+    for(const n of names){
+      const o=document.createElement("option");o.value=n;
+      o.textContent=n.length>34?n.slice(0,32)+"…":n;
+      sel.appendChild(o);
+    }
+  }catch(e){}
+}
+
+/* ---------- speed calibration tool ---------- */
+const CAL={video:null,points:[],natW:0,natH:0,img:null};
+function calDraw(){
+  const cv=$("#calcanvas"),ctx=cv.getContext("2d");
+  if(!CAL.img)return;
+  ctx.drawImage(CAL.img,0,0,cv.width,cv.height);
+  ctx.strokeStyle="#22d3ee";ctx.fillStyle="#22d3ee";
+  ctx.lineWidth=2;ctx.font="bold 15px Segoe UI";
+  const sx=cv.width/CAL.natW, sy=cv.height/CAL.natH;
+  CAL.points.forEach((p,i)=>{
+    const x=p[0]*sx,y=p[1]*sy;
+    ctx.beginPath();ctx.arc(x,y,6,0,7);ctx.fill();
+    ctx.fillText(String(i+1),x+9,y-6);
+  });
+  if(CAL.points.length>1){
+    ctx.beginPath();
+    CAL.points.forEach((p,i)=>{const x=p[0]*sx,y=p[1]*sy;
+      i?ctx.lineTo(x,y):ctx.moveTo(x,y);});
+    if(CAL.points.length===4)ctx.closePath();
+    ctx.stroke();
+  }
+  $("#cal-count").textContent=CAL.points.length+" / 4 points";
+}
+$("#calibrate").onclick=async()=>{
+  const name=$("#sample").value;
+  if(!name){toast("Pick a sample clip first — calibration is per-video");return;}
+  CAL.video=name;CAL.points=[];
+  $("#cal-video").textContent=name.length>30?name.slice(0,28)+"…":name;
+  const img=new Image();
+  img.onload=()=>{
+    CAL.img=img;CAL.natW=img.naturalWidth;CAL.natH=img.naturalHeight;
+    const cv=$("#calcanvas");
+    cv.width=720;cv.height=Math.round(720*CAL.natH/CAL.natW);
+    $("#caloverlay").classList.add("on");
+    calDraw();
+  };
+  img.onerror=()=>toast("Could not load a frame from that clip");
+  img.src=API+"/api/frame?name="+encodeURIComponent(name)+"&t="+Date.now();
+};
+$("#calcanvas").onclick=e=>{
+  if(CAL.points.length>=4)return;
+  const cv=$("#calcanvas"),r=cv.getBoundingClientRect();
+  const x=(e.clientX-r.left)*(cv.width/r.width)*(CAL.natW/cv.width);
+  const y=(e.clientY-r.top)*(cv.height/r.height)*(CAL.natH/cv.height);
+  CAL.points.push([Math.round(x),Math.round(y)]);
+  calDraw();
+};
+$("#calReset").onclick=()=>{CAL.points=[];calDraw();};
+$("#calClose").onclick=()=>$("#caloverlay").classList.remove("on");
+$("#caloverlay").onclick=e=>{if(e.target===$("#caloverlay"))$("#caloverlay").classList.remove("on");};
+$("#calSave").onclick=async()=>{
+  const dirv=$("#cal-dir").value;
+  const dir=dirv?dirv.split(",").map(Number):[];
+  const hasQuad=CAL.points.length===4;
+  if(!hasQuad&&!dir.length){
+    toast("Click 4 road corners (speed) and/or pick a traffic direction (wrong-way)");return;}
+  if(CAL.points.length>0&&!hasQuad){toast("Speed needs exactly 4 corners — or reset points");return;}
+  const w=parseFloat($("#cal-w").value),l=parseFloat($("#cal-l").value);
+  if(hasQuad&&!(w>0&&l>0)){toast("Enter the real width and length in metres");return;}
+  try{
+    const r=await fetch(API+"/api/calibration",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({video:CAL.video,points:hasQuad?CAL.points:[],
+        target_m:hasQuad?[w,l]:[],direction:dir})});
+    if(!r.ok)throw new Error(r.status);
+    $("#caloverlay").classList.remove("on");
+    toast("Saved ✔ Re-run the clip — "+(hasQuad?"speed":"")+(hasQuad&&dir.length?" + ":"")+(dir.length?"wrong-way":"")+" active");
+  }catch(e){toast("Save failed: "+e.message);}
+};
+
+/* boot */
+loadSamples();
+refresh();
+setInterval(refresh,3500);
+</script>
+</body>
+</html>

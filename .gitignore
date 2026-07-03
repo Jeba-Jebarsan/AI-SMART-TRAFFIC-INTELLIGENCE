@@ -1,0 +1,17 @@
+# Large / regeneratable binaries — keep the repo lightweight
+data/videos/
+data/output/
+models/*.pt
+*.mp4
+*.avi
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.egg-info/
+
+# OS / editor
+.DS_Store
+Thumbs.db
