@@ -1,15 +1,30 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="AI Smart Traffic Intelligence Platform" width="100%"/>
+</p>
+
 # 🚦 Smart Traffic Violation System 🇱🇰
 
-AI that turns any CCTV / traffic clip into **actionable enforcement**: it detects
-and tracks vehicles, catches **no-helmet riders, red-light jumping, over-speeding,
-wrong-way driving and triple-riding**, reads the number plate, and auto-generates
-an **e-challan with photo evidence** — all shown on a live "traffic control centre"
-dashboard.
+AI that turns a **live camera feed** into **actionable enforcement**: it
+detects and tracks vehicles in real time,
+catches **no-helmet riders, red-light jumping, over-speeding, wrong-way driving,
+triple-riding, no-seatbelt, no-rest-break (fatigue), wheelie/stunt riding and
+mobile-phone use**, reads the number plate, and auto-generates an
+**e-challan with photo evidence** — all shown on a live "traffic control centre"
+dashboard. **Live only** — there is no file-upload / batch-analysis path.
 
-```
- VIDEO ─▶ YOLOv8 + ByteTrack ─▶ Signal state ─▶ Violation engine
-       ─▶ Plate OCR ─▶ e-challan ─▶ SQLite/JSON ─▶ Control-centre dashboard
-```
+<p align="center">
+  <img src="docs/architecture.svg" alt="AI pipeline: live feed → YOLOv8 + ByteTrack → homography → violation engine → ANPR + evidence → e-challan + dashboard" width="100%"/>
+</p>
+
+## 📸 Screenshots
+
+> Drop your own dashboard captures into `docs/screenshots/` and they'll show up
+> here. Suggested shots: the live annotated feed, an open e-challan with stamped
+> evidence, and the Vehicles·ANPR log.
+
+| Live control-centre | e-Challan with evidence |
+|---|---|
+| ![Live dashboard](docs/screenshots/dashboard.png) | ![e-Challan](docs/screenshots/challan.png) |
 
 ---
 
@@ -21,9 +36,9 @@ pip install -r requirements.txt
 ```
 
 `run.ps1` opens <http://localhost:8000>. The dashboard starts **empty and
-honest** — it only ever shows what the AI actually detected. The header badge
-tells everyone whether they're looking at `REAL AI RESULTS` or clearly-marked
-`SIMULATED DEMO DATA`.
+honest** — it only ever shows what the AI actually detected on a live feed.
+There is no mock/demo data anywhere; each Go Live / Play Live session starts
+from a clean slate and streams real detections.
 
 > **Just want the dashboard right now, before the big ML install finishes?**
 > The dashboard needs only the *core* deps:
@@ -31,7 +46,46 @@ tells everyone whether they're looking at `REAL AI RESULTS` or clearly-marked
 > pip install fastapi "uvicorn[standard]" python-multipart pillow
 > python -m uvicorn main:app --app-dir backend --port 8000
 > ```
-> YOLO/OCR are only needed to **Analyze** a real video.
+> YOLO/OCR are only needed to actually go **Live**.
+
+---
+
+## 🔌 Connecting a live camera source
+
+`Go Live` accepts anything OpenCV's `VideoCapture` can open, typed into the
+camera-source box:
+
+| Source | What to type |
+|---|---|
+| Laptop webcam | `0` (or `1`, `2`… for other attached cameras) |
+| IP / CCTV camera | `rtsp://user:pass@camera-ip:554/stream` |
+| An MJPEG HTTP stream | `http://host:port/stream.mjpg` |
+| Any capture-card / HDMI-in video source | Plug it into this PC — it shows up as a normal webcam, so use its camera index (often `1`) |
+
+### Streaming in from a phone or an external transmitter over RTMP
+
+A lot of transmitters (including most drone controller apps) only *push*
+video out over **RTMP** to a server — they don't expose a URL you can pull
+from directly, which is what `Go Live` needs. RTMP is a push protocol; this
+app is a pull client. The fix is a tiny local relay that receives the RTMP
+push and re-serves it as a pull-able RTSP URL:
+
+1. Download **[MediaMTX](https://github.com/bluenviron/mediamtx)** (a single
+   portable exe, no install) and run it. By default it listens for RTMP
+   pushes on port `1935` and re-exposes each one as RTSP on port `8554`.
+2. On the transmitter's live-stream/broadcast setting, set the **custom RTMP
+   URL** to `rtmp://<this-PC's-LAN-IP>:1935/live/cam1` (both devices must be
+   on the same network).
+3. In the dashboard's camera-source box, type `rtsp://127.0.0.1:8554/cam1`
+   and hit **Go Live**.
+
+If your phone/camera app can expose an RTSP or MJPEG URL directly (e.g.
+Android's "IP Webcam" app), skip the relay entirely and paste that URL
+straight into the camera-source box — it's a pull source already.
+
+Once connected, pick a **speed mode** (🐢/⚡/🚀) so a slower laptop can still
+keep up in real time — it analyzes every 1st/2nd/3rd frame instead of falling
+behind.
 
 ---
 
@@ -39,24 +93,23 @@ tells everyone whether they're looking at `REAL AI RESULTS` or clearly-marked
 
 | Action | What happens |
 |---|---|
-| **Analyze Video / Run Sample** | Real YOLO+ByteTrack runs in the background — and the video panel switches to a **live AI view** (MJPEG) so you watch boxes/plates/violations land in real time while it processes. Annotated video loads when done. |
-| **Speed mode (🐢/⚡/🚀)** | Analyze every 1st/2nd/3rd frame — output video stays full length, processing is ~1×/2×/3× faster. |
-| **🎬 Play Live** | Play any sample clip like a live CCTV feed — detections, plates and violations land in real time as it plays. Plays **once** (no loop re-counting). |
-| **Analyze URL** | Paste a YouTube / direct video URL → fetched with `yt-dlp` at up to **1080p** and analyzed. |
-| **Go Live** | Stream from a webcam (`0`), an IP/CCTV camera (`rtsp://…`) or a local file → real-time annotated MJPEG feed with live violation logging. |
+| **📹 Go Live** | Stream from a camera (`rtsp://…`) / an MJPEG URL / a webcam index → real-time annotated feed with live violation logging, ANPR and e-challans as it happens. |
+| **🎬 Play Live (sample)** | No live camera handy? Replay a bundled sample clip through the exact same live pipeline — detections, plates and violations land in real time as it plays. Plays **once** (no loop re-counting). |
+| **Speed mode (🐢/⚡/🚀)** | Analyze every 1st/2nd/3rd frame so the live feed keeps up in real time on slower hardware. |
 | **Vehicles · ANPR tab** | Best **confirmed** plate for every tracked vehicle. A number appears ONLY after two frames agree on it (digit-tail voting) — one garbled read can never show up. Click a row to see the captured plate photo. |
 | **Click any violation** | Opens the **e-challan**: photo evidence with the **proof stamped on the image** (speed + limit, plate, vehicle #, zoom inset), plate crop, fine. Buttons: **📧 Send to Police**, **⬇ PDF Challan**, print. |
 | **📍 ✎ location** | Set the camera location manually, or leave it to auto-detect from the video's GPS metadata (phone recordings) with reverse geocoding. |
-| **🎯 Speed setup** | Click 4 road corners + enter real metres → speed + over-speeding activate for that clip (pre-done for sample.mp4). Also pick the **traffic direction** there → wrong-way detection activates. All five violations then run simultaneously per vehicle. |
+| **🎯 Speed setup** | Click 4 road corners + enter real metres → speed + over-speeding activate for that clip (pre-done for sample.mp4). Also pick the **traffic direction** there → wrong-way detection activates. All violations then run simultaneously per vehicle. |
 | **⬇ CSV** | Exports the current violations or ANPR log for the "police back-office" story. |
-| **Demo data (simulated)** | Presentation fallback only — 34 fake violations, **badged SIMULATED in the header** so it can never pass as real. |
+| **🗑 Clear** | Wipes the current results + evidence for a clean slate (a fresh Go Live / Play Live also auto-clears on start). |
 
 **Police email alerts:** set `ALERTS` in `backend/config.py` (Gmail App
 Password) → every confirmed violation is auto-emailed with the PDF challan,
 evidence photo and plate crop. Credentials can also come from `SMTP_USER` /
 `SMTP_PASS` env vars.
 
-Put test footage in `data/videos/` or run `python scripts/download_sample.py`.
+Put sample footage in `data/videos/` (used by 🎬 Play Live) or run
+`python scripts/download_sample.py`.
 
 ---
 
@@ -66,14 +119,14 @@ Put test footage in `data/videos/` or run `python scripts/download_sample.py`.
 fallback ladder. Short version:
 
 1. **Hook (15s).** "Colombo already has 103 CCTV cameras watching its roads —
-   humans review the footage. We turn every one into an AI traffic officer."
-2. **Prove it's real (3min).** **Run Sample** on your best clip → boxes, track
-   IDs and plates land live; click a violation → e-challan with photo evidence,
-   plate crop and LKR fine.
-3. **Prove it's honest (1min).** Run the parked-bikes clip: **zero false
+   we turn every one of them into an AI traffic officer, live."
+2. **Prove it's real (3min).** **Go Live** from a camera (or **Play Live** on
+   your best sample clip) → boxes, track IDs and plates land live; click a
+   violation → e-challan with photo evidence, plate crop and LKR fine.
+3. **Prove it's honest (1min).** Live-play the parked-bikes clip: **zero false
    violations**. "Ask any other team what their system does with a parked bike."
 4. **Close.** AI Insights panel + hotspot map + CSV export: "an end-to-end
-   enforcement product, offline, on a laptop."
+   live enforcement product, running on a laptop."
 
 ---
 
@@ -84,7 +137,7 @@ fallback ladder. Short version:
 - **Engineered against false positives.** Confidence gates + multi-frame
   persistence + camera-motion-compensated movement checks: parked bikes,
   pedestrians and one-frame flickers can never trigger a challan.
-- **Honest by design.** Real vs simulated data is badged in the UI; unreadable
+- **Honest by design.** No mock data exists — every row is a live detection; unreadable
   plates say UNREADABLE; signal-less roads show "no signal in view" instead of
   an invented red light.
 - **Actionable output.** Auto e-challans with photo evidence + plate crop + fine,
@@ -118,10 +171,19 @@ OCR reads far better when the plate is localised first. Drop a YOLOv8 plate
 detector at `models/license_plate_detector.pt` (`python scripts/get_plate_model.py`,
 or export one from Roboflow Universe). The pipeline then runs **two-stage ANPR**
 — detect plate → crop → threshold → OCR — automatically. Without it, OCR falls
-back to the vehicle crop (lower accuracy). Plate cleanup is tuned for **Sri Lankan**
-formats (province code + letters + 4 digits).
+back to the vehicle crop (lower accuracy). Plate cleanup is **country-agnostic**:
+it shows exactly what was read (cleaned + spaced), never reformats to a
+national grammar — a plate is only confirmed once two frames agree on it.
 
-> 🇱🇰 **Localised for Sri Lanka:** fines in LKR, Colombo location, Sri Lankan plates.
+### 🔗 Seatbelt detection (optional)
+Base YOLO has no seatbelt class, so this violation stays **off** until you
+drop a trained model at `models/seatbelt.pt` (classes like `seatbelt` /
+`no seatbelt` — Roboflow Universe has ready-made YOLOv8 seatbelt-detection
+models). Unlike helmets there is no heuristic fallback — a wrong seatbelt
+fine is worse than no detection — so without the file, "No Seatbelt" simply
+never fires. Applies to cars/buses/trucks only, not motorcycles.
+
+> 🇱🇰 **Localised for Sri Lanka:** fines in LKR, Colombo location.
 > Change `FINES`, `CAMERA_LOCATION`, `CURRENCY` in `backend/config.py` to relocate.
 
 ---
@@ -129,19 +191,21 @@ formats (province code + letters + 4 digits).
 ## 📁 Structure
 
 ```
-backend/    config, db, detection, ocr, violations, pipeline, main(API), seed_demo
+backend/    config, db, detection, ocr, violations, pipeline, live, main(API)
 frontend/   index.html   (self-contained control-centre dashboard, no CDNs)
 scripts/    download_sample.py
-data/output snapshots/ , annotated.mp4 , traffic.db , results.json
-models/     yolov8n.pt (auto) , helmet.pt (optional)
+data/videos sample clips for 🎬 Play Live
+data/output snapshots/ , traffic.db , results.json
+models/     yolov8n.pt (auto) , helmet.pt (optional) , seatbelt.pt (optional)
 ```
 
 ## 🔌 API
 
 `GET /api/stats` · `GET /api/violations` · `GET /api/violations/{id}` ·
 `POST /api/violations/{id}/alert` (email police) · `GET /api/violations/{id}/pdf` ·
-`GET /api/vehicles` (ANPR log) · `GET /api/samples` · `GET /api/frame?name=` ·
-`GET|POST /api/calibration` (speed setup) · `POST /api/process` (upload, `every`) ·
-`POST /api/process_local` · `POST /api/process_url` · `GET /api/process/{job}` ·
-`POST /api/live/start|stop` · `GET /api/live.mjpg` ·
-`POST /api/seed` (simulated, badged) · `POST /api/reset`
+`GET /api/vehicles` (ANPR log) · `GET /api/samples` (sample clips for 🎬 Play Live) ·
+`GET /api/frame?name=` · `GET|POST /api/calibration` (speed setup) ·
+`POST /api/live/start` (`source`, `every` — camera/sample) ·
+`POST /api/live/stop` · `GET /api/live/status` · `GET /api/live.mjpg` ·
+`GET /api/live/frame` (raw frame for live calibration) ·
+`POST /api/location` · `POST /api/reset`

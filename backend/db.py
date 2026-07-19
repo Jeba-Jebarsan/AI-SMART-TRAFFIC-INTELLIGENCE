@@ -4,8 +4,8 @@ The dashboard reads exclusively through the FastAPI layer, which reads from
 here, so the DB is the single source of truth at runtime. The pipeline also
 mirrors everything to results.json as a static backup.
 
-Every row carries source='ai' or source='demo' so simulated demo data can
-never masquerade as a real detection on the dashboard.
+Every row carries source='ai' — the platform is live-only and produces no
+mock/demo data; each live session starts from a clean database.
 """
 import json
 import sqlite3
@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS violations (
     plate_conf  REAL,
     plate_img   TEXT,
     speed_kmph  REAL,
+    drive_seconds REAL,
     fine        INTEGER,
     timestamp   TEXT,
     frame_index INTEGER,
@@ -37,16 +38,20 @@ CREATE TABLE IF NOT EXISTS violations (
     source      TEXT DEFAULT 'ai'
 );
 CREATE TABLE IF NOT EXISTS vehicles (
-    track_id    INTEGER PRIMARY KEY,
-    cls         TEXT,
-    plate       TEXT,
-    plate_conf  REAL,
-    plate_img   TEXT,
-    plate_hits  INTEGER DEFAULT 0,
-    plate_note  TEXT,
-    first_seen  TEXT,
-    last_seen   TEXT,
-    source      TEXT DEFAULT 'ai'
+    track_id       INTEGER PRIMARY KEY,
+    cls            TEXT,
+    plate          TEXT,
+    plate_conf     REAL,
+    plate_img      TEXT,
+    plate_hits     INTEGER DEFAULT 0,
+    plate_note     TEXT,
+    helmet_status  TEXT,
+    seatbelt_status TEXT,
+    top_speed      REAL,
+    over_speed     INTEGER DEFAULT 0,
+    first_seen     TEXT,
+    last_seen      TEXT,
+    source         TEXT DEFAULT 'ai'
 );
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
@@ -59,10 +64,15 @@ _MIGRATIONS = {
     "violations": {
         "plate_img": "TEXT", "video_s": "REAL",
         "box": "TEXT", "source": "TEXT DEFAULT 'ai'",
+        "drive_seconds": "REAL",
     },
     "vehicles": {
         "plate_hits": "INTEGER DEFAULT 0",
         "plate_note": "TEXT",
+        "helmet_status": "TEXT",
+        "seatbelt_status": "TEXT",
+        "top_speed": "REAL",
+        "over_speed": "INTEGER DEFAULT 0",
     },
 }
 
@@ -110,38 +120,48 @@ def insert_violation(v: dict):
     v.setdefault("video_s", None)
     v.setdefault("box", None)
     v.setdefault("source", "ai")
+    v.setdefault("drive_seconds", None)
     with _lock, get_conn() as c:
         c.execute(
             """INSERT OR IGNORE INTO violations
                (challan_id, track_id, type, plate, plate_conf, plate_img,
-                speed_kmph, fine, timestamp, frame_index, video_s, box,
+                speed_kmph, drive_seconds, fine, timestamp, frame_index, video_s, box,
                 snapshot, location, status, source)
                VALUES (:challan_id,:track_id,:type,:plate,:plate_conf,:plate_img,
-                       :speed_kmph,:fine,:timestamp,:frame_index,:video_s,:box,
+                       :speed_kmph,:drive_seconds,:fine,:timestamp,:frame_index,:video_s,:box,
                        :snapshot,:location,:status,:source)""",
             v,
         )
 
 
 def upsert_vehicle(v: dict):
-    """Insert/refresh one tracked vehicle (best CONFIRMED plate so far)."""
+    """Insert/refresh one tracked vehicle (best CONFIRMED plate + compliance)."""
     v.setdefault("plate", None)
     v.setdefault("plate_conf", None)
     v.setdefault("plate_img", None)
     v.setdefault("plate_hits", 0)
     v.setdefault("plate_note", None)
+    v.setdefault("helmet_status", None)
+    v.setdefault("seatbelt_status", None)
+    v.setdefault("top_speed", None)
+    v.setdefault("over_speed", 0)
     v.setdefault("source", "ai")
     with _lock, get_conn() as c:
         c.execute(
             """INSERT INTO vehicles
                  (track_id, cls, plate, plate_conf, plate_img, plate_hits,
-                  plate_note, first_seen, last_seen, source)
+                  plate_note, helmet_status, seatbelt_status, top_speed,
+                  over_speed, first_seen, last_seen, source)
                VALUES (:track_id,:cls,:plate,:plate_conf,:plate_img,:plate_hits,
-                       :plate_note,:first_seen,:last_seen,:source)
+                       :plate_note,:helmet_status,:seatbelt_status,:top_speed,
+                       :over_speed,:first_seen,:last_seen,:source)
                ON CONFLICT(track_id) DO UPDATE SET
                  cls=excluded.cls, plate=excluded.plate,
                  plate_conf=excluded.plate_conf, plate_img=excluded.plate_img,
                  plate_hits=excluded.plate_hits, plate_note=excluded.plate_note,
+                 helmet_status=excluded.helmet_status,
+                 seatbelt_status=excluded.seatbelt_status,
+                 top_speed=excluded.top_speed, over_speed=excluded.over_speed,
                  last_seen=excluded.last_seen""",
             v,
         )
@@ -208,6 +228,12 @@ def stats():
         avg_speed = c.execute(
             "SELECT AVG(speed_kmph) s FROM violations "
             "WHERE type='Over Speeding' AND speed_kmph IS NOT NULL").fetchone()
+        # highest-speed records: fastest tracked vehicles (calibrated clips only,
+        # so top_speed is a real metric reading — 0/absent otherwise)
+        top_speeds = [dict(r) for r in c.execute(
+            "SELECT track_id, plate, cls, top_speed, over_speed FROM vehicles "
+            "WHERE top_speed IS NOT NULL AND top_speed > 0 "
+            "ORDER BY top_speed DESC LIMIT 5").fetchall()]
 
     by_type = {r["type"]: {"count": r["n"], "fines": r["f"]} for r in rows}
     return {
@@ -221,6 +247,8 @@ def stats():
         "plates_read": plates["n"],
         "repeat_offenders": repeat,
         "avg_over_speed": round(avg_speed["s"], 1) if avg_speed["s"] else None,
+        "top_speeds": top_speeds,
+        "max_speed": round(top_speeds[0]["top_speed"], 1) if top_speeds else None,
         "location": get_meta("location_override")
         or get_meta("location", config.CAMERA_LOCATION),
         "processed_at": get_meta("processed_at"),

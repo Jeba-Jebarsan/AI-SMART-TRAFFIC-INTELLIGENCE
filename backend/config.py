@@ -41,6 +41,14 @@ HELMET_MODEL = str(MODELS_DIR / "helmet.pt")
 # whole car. Drop a trained model here (see scripts/get_plate_model.py / README).
 PLATE_MODEL = str(MODELS_DIR / "license_plate_detector.pt")
 
+# OPTIONAL drop-in seatbelt model (cars/buses/trucks only — not motorcycles).
+# Classes should include something like 'seatbelt' / 'no seatbelt'. Same rule
+# as the helmet model: if the file is absent the feature stays OFF — there is
+# no colour/shape heuristic fallback because a wrong seatbelt fine is worse
+# than no detection at all (Roboflow Universe has ready-made "seatbelt
+# detection" YOLOv8 models you can drop in here).
+SEATBELT_MODEL = str(MODELS_DIR / "seatbelt.pt")
+
 # "auto" picks the GPU if torch+CUDA are available, else CPU. Resolved lazily
 # in detection.py so importing this module never requires torch.
 DEVICE = "auto"
@@ -65,6 +73,8 @@ CONF = {
     "person": 0.40,      # person conf required to count as a rider
     "light": 0.45,       # traffic-light conf required to read signal colour
     "no_helmet": 0.50,   # helmet-model 'Without Helmet' must be this sure
+    "no_seatbelt": 0.50, # seatbelt-model 'No Seatbelt' must be this sure
+    "phone": 0.35,       # COCO 'cell phone' conf required to count as phone-use
 }
 
 # ----------------------------------------------------------------------------
@@ -74,10 +84,27 @@ CONF = {
 HELMET_MIN_HITS = 3      # no-helmet must be seen in >= N frames of a track
 TRIPLE_MIN_HITS = 3      # 3+ riders must be seen in >= N frames
 RED_MIN_STREAK = 3       # signal must read RED for N consecutive detections
+SEATBELT_MIN_HITS = 3    # no-seatbelt must be seen in >= N frames of a track
+PHONE_MIN_HITS = 4       # phone-in-hand must be seen in >= N frames of a track
+
+# --- Wheelie / stunt riding (heuristic — no dedicated model needed) ---------
+# A wheelie lifts the front wheel, so the motorcycle's bounding box suddenly
+# becomes much TALLER relative to how that same bike normally looks. We detect
+# a RELATIVE spike against each bike's own baseline aspect (height/width),
+# never an absolute value — a tall rear-view rider has a high aspect too, so an
+# absolute threshold alone would false-positive. Requires motion + persistence.
+WHEELIE_MIN_HISTORY = 10   # frames of aspect history needed before judging (baseline)
+WHEELIE_MIN_ASPECT = 1.8   # absolute floor: box must be at least this tall/wide
+WHEELIE_RISE_RATIO = 1.45  # AND at least this much taller than the bike's baseline
+WHEELIE_MIN_HITS = 4       # the spike must persist >= N frames
 
 # Rider analysis is skipped for motorcycles smaller than this fraction of the
 # frame height — a 15-pixel bike is too small to judge helmets honestly.
 MIN_MOTO_H_FRAC = 0.06
+
+# Seatbelt analysis is skipped for cars/buses/trucks smaller than this
+# fraction of the frame height — the windshield is unreadable otherwise.
+MIN_CAR_H_FRAC = 0.10
 
 # A track must MOVE to violate (camera-motion compensated). Parked bikes and
 # roadside scooters can never trigger helmet / triple-riding / red-light.
@@ -129,10 +156,11 @@ CALIBRATION_FILE = DATA_DIR / "calibration.json"
 # COCO class ids for the default YOLOv8 model
 COCO = {
     "person": 0, "bicycle": 1, "car": 2, "motorcycle": 3,
-    "bus": 5, "truck": 7, "traffic light": 9,
+    "bus": 5, "truck": 7, "traffic light": 9, "cell phone": 67,
 }
 VEHICLE_CLASSES = {COCO["car"], COCO["motorcycle"], COCO["bus"],
                    COCO["truck"], COCO["bicycle"]}
+SEATBELT_CLASSES = {COCO["car"], COCO["bus"], COCO["truck"]}
 
 # ----------------------------------------------------------------------------
 # Which violations are active
@@ -143,7 +171,25 @@ ENABLE = {
     "over_speed": True,      # only fires when speed is calibrated for the clip
     "wrong_way": True,       # only fires when a direction is calibrated (🎯 tool)
     "triple_riding": True,
+    "no_seatbelt": True,     # only fires when models/seatbelt.pt is present
+    "no_rest_break": True,   # continuous-driving / fatigue rule
+    "wheelie": True,         # motorcycle wheelie / stunt riding (heuristic)
+    "phone_use": True,       # rider/driver on a phone (COCO cell-phone detection)
 }
+
+# ----------------------------------------------------------------------------
+# Continuous-driving / rest-break rule — flags a vehicle that this camera has
+# watched drive CONTINUOUSLY (no qualifying stop) for too long, e.g. a
+# fatigued commercial driver skipping mandatory rest breaks.
+#
+# Real transport-authority driving-hour rules work in HOURS (Sri Lanka's
+# public/commercial transport rules and the EU's ~4.5h AETR limit are both
+# this order of magnitude) — a live camera session is usually minutes,
+# so the default below is a DEMO-SCALE value that can actually be observed
+# live. Set MAX_CONTINUOUS_DRIVE_SECONDS to the real legal limit (in seconds)
+# for an actual deployment.
+MAX_CONTINUOUS_DRIVE_SECONDS = 240   # demo default: 4 minutes
+BREAK_MIN_STOP_SECONDS = 15          # shorter stops (traffic lights, jams) don't count as a break
 
 # ----------------------------------------------------------------------------
 # Fines in LKR (shown on the e-challan). Tweak freely.
@@ -154,15 +200,23 @@ FINES = {   # Sri Lankan spot-fine style amounts (LKR)
     "Over Speeding": 3000,
     "Wrong Way": 2000,
     "Triple Riding": 1500,
+    "No Seatbelt": 1500,
+    "No Rest Break": 2000,
+    "Wheelie Stunt": 5000,       # dangerous stunt riding — heaviest spot fine
+    "Mobile Phone Use": 2000,
 }
 
 # Emoji / label metadata used by the pipeline + dashboard
 VIOLATION_META = {
-    "No Helmet":      {"emoji": "⛑",  "color": "#f59e0b"},
-    "Red Light Jump": {"emoji": "🔴", "color": "#ef4444"},
-    "Over Speeding":  {"emoji": "🏎", "color": "#a855f7"},
-    "Wrong Way":      {"emoji": "↩",  "color": "#3b82f6"},
-    "Triple Riding":  {"emoji": "👥", "color": "#14b8a6"},
+    "No Helmet":       {"emoji": "⛑",  "color": "#f59e0b"},
+    "Red Light Jump":  {"emoji": "🔴", "color": "#ef4444"},
+    "Over Speeding":   {"emoji": "🏎", "color": "#a855f7"},
+    "Wrong Way":       {"emoji": "↩",  "color": "#3b82f6"},
+    "Triple Riding":   {"emoji": "👥", "color": "#14b8a6"},
+    "No Seatbelt":     {"emoji": "🔗", "color": "#eab308"},
+    "No Rest Break":   {"emoji": "⏱",  "color": "#f97316"},
+    "Wheelie Stunt":   {"emoji": "🛞", "color": "#ec4899"},
+    "Mobile Phone Use":{"emoji": "📱", "color": "#06b6d4"},
 }
 
 # ----------------------------------------------------------------------------
@@ -205,6 +259,21 @@ SPEED_TARGET_M = (25, 250)   # (width metres, length metres) of the road region
 # --- Fallback speed (used only when SPEED_SOURCE is None) ---
 # How many image pixels represent 1 metre on the road plane.
 PIXELS_PER_METER = 8.0
+
+# --- Speed-filtering knobs (the SpeedEstimator module, backend/speed.py) ---
+# Speed is estimated over a MULTI-FRAME sliding window (never a single-frame
+# pixel delta): least-squares regression of road-metres vs time, with outlier
+# rejection, EMA smoothing and a confidence gate. These tune that filter.
+# Show a ROUGH pixel-based speed for vehicles when the camera is NOT calibrated?
+# Default OFF: exact speed needs a perspective calibration (the 🎯 tool / a
+# calibration.json entry), so an uncalibrated camera shows NO speed rather than
+# a misleading/"random" number. Set True to display approximate (~) speeds.
+SPEED_APPROX = False
+SPEED_EMA_ALPHA = 0.4        # weight on the newest reading when smoothing (0..1)
+SPEED_MIN_R2 = 0.55          # min linearity (R^2) of motion required to TRUST a speed
+SPEED_OUTLIER_SIGMA = 2.0    # drop position samples > N*std off the fitted line
+SPEED_SANITY_MAX = 250.0     # readings above this km/h are rejected as tracker noise
+SPEED_MIN_SECONDS = 0.35     # a track must be watched this long before a speed is trusted
 
 # ----------------------------------------------------------------------------
 # Wrong-way detection

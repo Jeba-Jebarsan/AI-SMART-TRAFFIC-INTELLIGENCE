@@ -4,13 +4,12 @@ uvicorn[standard]>=0.27.0
 python-multipart>=0.0.9
 pillow>=10.0.0
 
-# ---- AI pipeline (heavier; needed only to Analyze real videos) ----
+# ---- AI pipeline (heavier; needed for live detection) ----
 ultralytics>=8.1.0
 opencv-python>=4.8.0
 easyocr>=1.7.0
 numpy>=1.24.0
-imageio[ffmpeg]>=2.31.0   # browser-friendly H.264 annotated output
-yt-dlp>=2024.1.0          # analyze from YouTube / stream URLs
+imageio[ffmpeg]>=2.31.0   # ships the ffmpeg binary used to read GPS from video metadata
 
 # ---- GPU NOTE ----
 # ultralytics/easyocr pull in torch. For your NVIDIA GPU install the CUDA build

@@ -14,9 +14,8 @@ Write-Host "==============================================" -ForegroundColor Cya
 $py = "python"
 try { & $py --version | Out-Null } catch { $py = "py" }
 
-# NOTE: no auto-seed — the dashboard shows ONLY real AI results by default.
-# For a simulated safety-net dataset use the "Demo Data" button in the UI
-# (clearly badged as SIMULATED) or run:  python backend\seed_demo.py
+# The dashboard shows ONLY real, live AI results — there is no mock/demo data.
+# Each Go Live / Play Live session starts clean and streams real detections.
 
 # Launch the server + open the browser
 Write-Host "`nStarting dashboard at http://localhost:8000 ..." -ForegroundColor Yellow

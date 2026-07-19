@@ -18,9 +18,9 @@ live. That honesty is the pitch:
 > in one box, offline, no cloud, running on a laptop."
 
 Four proof points to say out loud:
-1. **No mock data.** The header badge shows `REAL AI RESULTS` vs `SIMULATED
-   DEMO DATA` — the system refuses to blur that line. Unreadable plates say
-   `UNREADABLE`, never an invented number.
+1. **No mock data — at all.** The system has no simulated/demo mode; everything
+   on screen is a live detection, badged `LIVE AI RESULTS`. Unreadable plates
+   say `UNREADABLE`, never an invented number.
 2. **Engineered against false positives.** A violation needs a *confident*,
    *tracked*, *moving* vehicle observed over *multiple frames*. Parked bikes,
    pedestrians and one-frame flickers can't trigger it. (Show the parked-bike
@@ -71,11 +71,11 @@ Own footage of Galle Road tuk-tuks and bikes beats any YouTube clip for the
 - Kaggle [Road Traffic Video Monitoring](https://www.kaggle.com/datasets/shawon10/road-traffic-video-monitoring) — junction CCTV clips
 - Kaggle [Highway Traffic Videos](https://www.kaggle.com/datasets/aryashah2k/highway-traffic-videos-dataset) — fixed-camera highway CCTV
 - Mendeley [Helmet Use in Motorcycle Drivers](https://data.mendeley.com/datasets/bmy35m25pw/1) — 32 rider videos with/without helmets
-- YouTube search terms that find usable clips (then paste the URL straight
-  into the dashboard's **Analyze URL** box): `"traffic junction cctv footage
-  india"`, `"colombo traffic 4k"`, `"license plate recognition test video"`,
-  `"motorcycle traffic fixed camera"`. Prefer fixed-camera, daytime, 720p+.
-  Download happens automatically via yt-dlp — test every URL the night before.
+- YouTube search terms that find usable clips (download with any tool, drop
+  the file into `data/videos/` so it shows up in the sample dropdown for
+  🎬 Play Live): `"traffic junction cctv footage india"`, `"colombo traffic
+  4k"`, `"license plate recognition test video"`, `"motorcycle traffic fixed
+  camera"`. Prefer fixed-camera, daytime, 720p+.
 
 ---
 
@@ -83,8 +83,11 @@ Own footage of Galle Road tuk-tuks and bikes beats any YouTube clip for the
 
 **Prep (before judges arrive):**
 1. `./run.ps1` → dashboard opens EMPTY (honest zero state — that's fine).
-2. Pre-process your best clip once so `annotated.mp4` is ready as backup.
-3. Have 2–3 clips in `data/videos/` (they appear in the sample dropdown).
+2. If using a live camera source: do one **Go Live** dry-run beforehand so the
+   RTSP/stream URL is confirmed working — don't discover a connection issue
+   live in front of judges.
+3. Have 2–3 clips in `data/videos/` as a fallback (they appear in the sample
+   dropdown for 🎬 Play Live).
 4. **Set up police email alerts** (the wow moment): in `backend/config.py`
    set `ALERTS = {"enabled": True, "to": "<a second email you control>",
    ..., "user": "<your gmail>", "password": "<Gmail App Password>"}`.
@@ -104,9 +107,9 @@ Say the Colombo-103-cameras line. Point at the header: "No data yet — this
 dashboard only ever shows what the AI actually found."
 
 **Act 2 — live analysis (3 min).**
-Pick your best clip in the sample dropdown → **Run Sample**. The video panel
-switches to the LIVE AI VIEW — judges literally watch the model box vehicles,
-read plates and flag violations in real time while the feed fills. Narrate:
+**Go Live** from a camera (or, none handy, pick your best clip in the sample
+dropdown → **🎬 Play Live**). Judges literally watch the model box vehicles,
+read plates and flag violations in real time as the feed streams. Narrate:
 - "Every vehicle gets a ByteTrack ID — that's how we fine each one once,
   not forty times."
 - point at the ANPR tab: "plates are read continuously for every vehicle,
@@ -198,15 +201,17 @@ benchmark with the Police traffic division."
 
 ## 5. If something breaks (fallback ladder)
 
-1. Annotated video won't play → refresh once; it reloads with cache-buster.
-2. Processing is slow in the room → use the pre-processed results already
-   on the dashboard (they persist), narrate over the existing annotated video.
-3. Total ML failure → **✨ Demo data (simulated)** button. It is badged
-   SIMULATED in the header — OWN it: "this is our simulated preview mode for
-   stakeholders; here's the real footage we processed earlier" and show
-   `data/output/annotated.mp4` + snapshots in the folder.
-4. Browser dies → results.json + snapshots + annotated.mp4 in `data/output/`
-   are all on disk. Nothing is lost.
+1. Live connection drops → **⏹ Stop**, then **🎬 Play Live** on a sample clip
+   as the seamless fallback — same pipeline, same live experience for judges.
+2. Live feed looks stuck → drop to **🚀 Turbo** speed mode; heavy footage on
+   CPU needs the frame-skip to keep up in real time.
+3. Total ML failure → show the real evidence snapshots + PDF challans already
+   captured on disk in `data/output/snapshots/` from an earlier live run —
+   "here's what the system produced when it ran; the models are just slow to
+   reload in this room." No fake data to fall back on, by design — that's the
+   honesty story, own it.
+4. Browser dies → results.json + snapshots in `data/output/` are all on disk.
+   Nothing is lost; refresh and the dashboard rebuilds from the database.
 
 ---
 

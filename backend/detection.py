@@ -11,6 +11,7 @@ import config
 _vehicle = None
 _helmet = None
 _plate = None
+_seatbelt = None
 _device = None
 
 
@@ -56,3 +57,17 @@ def load_plate():
         from ultralytics import YOLO
         _plate = YOLO(config.PLATE_MODEL)
     return _plate
+
+
+def has_seatbelt_model():
+    return os.path.exists(config.SEATBELT_MODEL)
+
+
+def load_seatbelt():
+    """Load (and cache) the optional seatbelt model, or return None (feature
+    stays off — no heuristic fallback, unlike helmets)."""
+    global _seatbelt
+    if _seatbelt is None and has_seatbelt_model():
+        from ultralytics import YOLO
+        _seatbelt = YOLO(config.SEATBELT_MODEL)
+    return _seatbelt

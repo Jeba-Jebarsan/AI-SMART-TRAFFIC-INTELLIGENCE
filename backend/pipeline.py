@@ -1,68 +1,31 @@
 """
-End-to-end video processing pipeline.
+Shared frame-processing pipeline: detection -> tracking -> signal state ->
+rider/seatbelt association -> continuous ANPR -> ViolationEngine -> evidence
++ e-challan -> SQLite + results.json.
 
-    video -> YOLOv8 + ByteTrack -> signal state -> rider association
-          -> continuous ANPR -> ViolationEngine -> evidence + e-challan
-          -> SQLite + results.json + annotated.mp4
-
-Designed so the expensive, flaky parts run OFFLINE and write their results to
-disk. The live demo reads those results, so it can never be broken by the model
-being slow or wrong in the room.
+LIVE ONLY: this platform has no file-upload / batch-analysis path. The single
+per-frame entry point (process_frame) is driven by live.py against an IP
+camera, RTSP/HTTP stream, webcam, or a sample-clip live replay.
 
 Honesty rules baked in:
   * a violation needs a CONFIDENT, TRACKED, MOVING subject seen over several
     frames — parked bikes / pedestrians / one-frame flickers never fire
-  * helmet status is only judged when a rider is actually on the motorcycle
-    and the bike is close enough to see
-  * plates come from real OCR; unreadable stays UNKNOWN — never invented
+  * helmet/seatbelt status is only judged from a POSITIVE model detection —
+    absence of a detection never convicts anyone
+  * plates come from real OCR; unconfirmed reads stay off the dashboard —
+    never invented
 """
 import datetime
 import json
-import threading
 
 import alerts
 import config
 import db
 import ocr
 from challan import make_challan_id
-from detection import load, resolve_device
+from detection import load, load_seatbelt, resolve_device
 from location import resolve_location
 from violations import ViolationEngine, centroid
-
-# ------------------------------------------------------------- live preview
-# While a video is being analyzed, every annotated frame is published here so
-# the dashboard can stream the analysis LIVE (MJPEG) instead of waiting for
-# the final file. See /api/preview.mjpg.
-_PREVIEW_LOCK = threading.Lock()
-_PREVIEW = {"jpg": None, "active": False}
-
-
-def _publish_preview(frame_bgr):
-    import cv2
-    h, w = frame_bgr.shape[:2]
-    if w > 960:                                   # bandwidth-friendly size
-        frame_bgr = cv2.resize(frame_bgr, (960, int(h * 960 / w)))
-    ok, buf = cv2.imencode(".jpg", frame_bgr, [cv2.IMWRITE_JPEG_QUALITY, 70])
-    if ok:
-        with _PREVIEW_LOCK:
-            _PREVIEW["jpg"] = buf.tobytes()
-
-
-def preview_jpg():
-    with _PREVIEW_LOCK:
-        return _PREVIEW["jpg"]
-
-
-def preview_active():
-    with _PREVIEW_LOCK:
-        return _PREVIEW["active"]
-
-
-def _set_preview_active(on):
-    with _PREVIEW_LOCK:
-        _PREVIEW["active"] = bool(on)
-        if not on:
-            _PREVIEW["jpg"] = None
 
 
 # --------------------------------------------------------------------- helpers
@@ -289,6 +252,90 @@ def build_riders(frame, motos, persons, helmet_model):
     return riders
 
 
+def _is_no_seatbelt(label):
+    l = label.lower()
+    return "belt" in l and ("no" in l or "without" in l or "un" in l)
+
+
+def _is_seatbelt(label):
+    l = label.lower()
+    return "belt" in l and not _is_no_seatbelt(l)
+
+
+def build_seatbelt_status(frame, cars, seatbelt_model):
+    """Judge front-seat seatbelt use for cars/buses/trucks via the OPTIONAL
+    drop-in model (models/seatbelt.pt). Returns [] when the model isn't
+    installed — there is no colour/shape heuristic fallback here (unlike the
+    helmet heuristic) because a wrong seatbelt fine is worse than none.
+
+    Only a POSITIVE 'no seatbelt' detection ever counts against a driver —
+    absence of any detection proves nothing, same rule as helmets.
+    """
+    if seatbelt_model is None or not cars:
+        return []
+    H, W = frame.shape[:2]
+    out = []
+    for c in cars:
+        x1, y1, x2, y2 = c["box"]
+        mh, mw = y2 - y1, x2 - x1
+        if mh < config.MIN_CAR_H_FRAC * H:
+            continue
+        # windshield / driver area: upper ~55% of the vehicle box, trimmed
+        # in from the side mirrors
+        wx1 = int(_clip(x1 + 0.08 * mw, 0, W))
+        wx2 = int(_clip(x2 - 0.08 * mw, 0, W))
+        wy1 = int(_clip(y1, 0, H))
+        wy2 = int(_clip(y1 + 0.55 * mh, 0, H))
+        crop = frame[wy1:wy2, wx1:wx2]
+        if crop.size == 0:
+            continue
+        r = seatbelt_model.predict(crop, verbose=False, conf=0.30,
+                                   device=resolve_device())[0]
+        no_belt, belt_ok = False, False
+        names = r.names
+        if r.boxes is not None:
+            for b in r.boxes:
+                label = names[int(b.cls[0])]
+                conf = float(b.conf[0])
+                if _is_no_seatbelt(label) and conf >= config.CONF["no_seatbelt"]:
+                    no_belt = True
+                elif _is_seatbelt(label) and conf >= 0.35:
+                    belt_ok = True
+        if belt_ok and no_belt:
+            belt_ok = False        # conservative: trust the violation signal
+        out.append({"track_id": c["track_id"], "box": c["box"],
+                    "no_seatbelt": no_belt, "seatbelt_ok": belt_ok})
+    return out
+
+
+def build_phone_status(motos, cars, persons, phones):
+    """Associate detected phones (COCO 'cell phone') with the rider/driver of a
+    vehicle. Returns [{track_id, box, phone}] for every analysed motorcycle and
+    car — phone=True when a phone overlaps this vehicle's occupant THIS frame.
+
+    Every analysed vehicle is reported (even with phone=False) so the engine
+    can DECAY a phone streak when the phone drops out of view — a phone must be
+    seen across several frames (config.PHONE_MIN_HITS) before it convicts, so a
+    one-frame stray detection never issues a fine. Same honesty rule as the
+    other detectors: only a POSITIVE association counts.
+    """
+    out = []
+    for m in motos:
+        onboard = [p for p in persons if _on_board(p["box"], m["box"])]
+        use = any(_overlap_ratio(ph, p["box"]) >= 0.20
+                  for p in onboard for ph in phones) if phones else False
+        out.append({"track_id": m["track_id"], "box": m["box"], "phone": use})
+    for c in cars:
+        x1, y1, x2, y2 = c["box"]
+        mh, mw = y2 - y1, x2 - x1
+        # driver area: upper 60% of the car box, trimmed in from the mirrors
+        region = [x1 + 0.06 * mw, y1, x2 - 0.06 * mw, y1 + 0.60 * mh]
+        use = any(_overlap_ratio(ph, region) >= 0.40
+                  for ph in phones) if phones else False
+        out.append({"track_id": c["track_id"], "box": c["box"], "phone": use})
+    return out
+
+
 # ------------------------------------------------------------------------ ANPR
 def _anpr_step(frame, vehicles, state, engine, fidx):
     """Continuous plate reading: keep the BEST read per track over time.
@@ -492,7 +539,7 @@ def _plate_banner(out, box, entry, sc, lift=0):
 
 
 def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
-          state, fidx, speeds=None):
+          state, fidx, speeds=None, belts=None, phones=None):
     import cv2
     import numpy as np
 
@@ -525,12 +572,16 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
         cv2.rectangle(out, (x1, y1), (x2, y2), (0, 210, 255), 1)
 
     rider_ids = {r["track_id"]: r for r in riders}
+    belt_ids = {b["track_id"]: b for b in (belts or [])}
+    phone_ids = {p["track_id"]: p for p in (phones or [])}
     for v in vehicles:
         x1, y1, x2, y2 = [int(c) for c in v["box"]]
         col = _PALETTE.get(v["cls"], (180, 180, 180))
         tid = v["track_id"]
         r = rider_ids.get(tid) if v["cls"] == config.COCO["motorcycle"] else None
-        flagged = r and r["no_helmet"] and r["riders"] >= 1
+        bstat = belt_ids.get(tid) if v["cls"] in config.SEATBELT_CLASSES else None
+        flagged = (r and r["no_helmet"] and r["riders"] >= 1) or \
+                  (bstat and bstat["no_seatbelt"])
         _corner_box(out, v["box"], (0, 0, 255) if flagged else col,
                     3 if flagged else 2)
 
@@ -540,15 +591,18 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
 
         # SPEED chip centred ABOVE the vehicle — red when over the limit
         spd = speeds.get(tid) if speeds else None
+        approx = engine.transform_fn is None
         lift = 0
         if spd:
-            stext = f"{spd} km/h"
+            stext = (f"~{spd} km/h" if approx else f"{spd} km/h")
             fs = 0.6 * sc + 0.2
             (tw2, th2), _ = cv2.getTextSize(stext, cv2.FONT_HERSHEY_SIMPLEX,
                                             fs, 2)
             scx = max(2, min((x1 + x2) // 2 - tw2 // 2 - 6, w - tw2 - 14))
             scy = max(int(34 * sc) + 16, y1 - 8 - th2 - 10)
-            over = spd > config.SPEED_LIMIT_KMPH
+            # only paint the "over the limit" red when speed is CALIBRATED —
+            # an approximate speed is informational, never an accusation
+            over = (not approx) and spd > config.SPEED_LIMIT_KMPH
             cv2.rectangle(out, (scx, scy), (scx + tw2 + 12, scy + th2 + 10),
                           (0, 0, 200) if over else (30, 30, 30), -1)
             cv2.putText(out, stext, (scx + 6, scy + th2 + 3),
@@ -573,6 +627,29 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
             if r["riders"] >= 3:
                 _put_tag(out, f"{r['riders']} RIDERS", x2 - int(80 * sc), y1 + 16,
                          (0, 120, 255), 0.5 * sc + 0.15, 2)
+
+        # seatbelt status chip for cars/buses/trucks (only when the optional
+        # seatbelt model is installed and produced a reading for this track)
+        if bstat:
+            if bstat["no_seatbelt"]:
+                _put_tag(out, "NO SEATBELT", x1, min(y2 + int(38 * sc) + 8, h - 4),
+                         (0, 0, 255), 0.6 * sc + 0.15, 2)
+            elif bstat["seatbelt_ok"]:
+                _put_tag(out, "SEATBELT OK", x1, min(y2 + int(38 * sc) + 8, h - 4),
+                         (0, 200, 0), 0.5 * sc + 0.15)
+
+        # stunt (wheelie) + phone-use chips, driven by the engine's per-track
+        # state (so they reflect the SAME persistence-gated logic that fires
+        # the violation, not a raw one-frame guess)
+        stt = engine.tracks.get(tid)
+        if stt and ("wheelie" in stt["emitted"] or stt.get("wheelie_hits", 0) >= 2):
+            _put_tag(out, "WHEELIE / STUNT", x1,
+                     min(y2 + int(58 * sc) + 8, h - 4), (200, 0, 255),
+                     0.6 * sc + 0.15, 2)
+        pstat = phone_ids.get(tid)
+        if pstat and (pstat.get("phone") or (stt and "phone" in stt["emitted"])):
+            _put_tag(out, "ON PHONE", x1, min(y2 + int(78 * sc) + 8, h - 4),
+                     (0, 200, 255), 0.6 * sc + 0.15, 2)
 
     # --- HUD (top-left): counters everyone in the room can read
     n_veh = len(state["vehicle_ids"])
@@ -614,6 +691,7 @@ def _save_snapshot(frame, event, seq, plate=None, location=None):
     cv2.rectangle(out, (x1, y1), (x2, y2), (0, 0, 255), 3)
 
     speed = event.get("speed_kmph")
+    drive_secs = event.get("drive_seconds")
     tid = event.get("track_id")
 
     # zoomed inset of the offender (bottom-right) so judges see the subject
@@ -630,9 +708,15 @@ def _save_snapshot(frame, event, seq, plate=None, location=None):
         cv2.rectangle(out, (ox, oy), (ox + zw, oy + zh), (0, 0, 255), 2)
         cv2.putText(out, "EVIDENCE ZOOM", (ox, oy - 6),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2, cv2.LINE_AA)
-        # the measured proof, stamped INSIDE the zoom for over-speeding
+        # the measured proof, stamped INSIDE the zoom for over-speeding /
+        # continuous-driving events
+        stamp = None
         if speed:
             stamp = f"{speed} km/h  (limit {config.SPEED_LIMIT_KMPH})"
+        elif drive_secs:
+            stamp = (f"{drive_secs/60:.0f} min non-stop "
+                     f"(limit {config.MAX_CONTINUOUS_DRIVE_SECONDS/60:.0f} min)")
+        if stamp:
             cv2.rectangle(out, (ox, oy + zh - 30), (ox + zw, oy + zh),
                           (0, 0, 180), -1)
             cv2.putText(out, stamp, (ox + 8, oy + zh - 9),
@@ -642,6 +726,8 @@ def _save_snapshot(frame, event, seq, plate=None, location=None):
     parts = [event["type"]]
     if speed:
         parts.append(f"{speed} km/h in {config.SPEED_LIMIT_KMPH} zone")
+    if drive_secs:
+        parts.append(f"{drive_secs/60:.0f} min continuous driving")
     if plate and plate != "UNKNOWN":
         parts.append(f"PLATE {plate}")
     if tid is not None:
@@ -657,39 +743,9 @@ def _save_snapshot(frame, event, seq, plate=None, location=None):
     return name
 
 
-# ------------------------------------------------------------------- video I/O
-def _make_writer(path, fps, size):
-    """Prefer imageio+libx264 (browser-friendly H.264); fall back to cv2 mp4v."""
-    try:
-        import imageio
-        w = imageio.get_writer(str(path), fps=fps, codec="libx264",
-                               quality=8, macro_block_size=None)
-        return ("imageio", w)
-    except Exception:
-        import cv2
-        w = cv2.VideoWriter(str(path), cv2.VideoWriter_fourcc(*"mp4v"), fps, size)
-        return ("cv2", w)
-
-
-def _write_frame(writer, frame_bgr):
-    kind, w = writer
-    if kind == "imageio":
-        import cv2
-        w.append_data(cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB))
-    else:
-        w.write(frame_bgr)
-
-
-def _close_writer(writer):
-    kind, w = writer
-    if kind == "imageio":
-        w.close()
-    else:
-        w.release()
-
-
 TRACK_CLASSES = list(config.VEHICLE_CLASSES |
-                     {config.COCO["person"], config.COCO["traffic light"]})
+                     {config.COCO["person"], config.COCO["traffic light"],
+                      config.COCO["cell phone"]})
 
 
 def new_run_state(fps, seq_base=0, frame_w=None):
@@ -709,9 +765,60 @@ def new_run_state(fps, seq_base=0, frame_w=None):
         "ocr_cool": {},        # track_id -> skip ANPR until this frame
         "best_crop": {},       # track_id -> (box_h, vehicle_crop) for the sweep
         "veh_meta": {},        # track_id -> {cls, first_seen, last_seen}
+        # per-vehicle COMPLIANCE (the "normal / OK" states, not just violations):
+        # helmet/seatbelt -> "ok" | "bad" | None(not assessed); top_speed km/h.
+        "compliance": {},      # track_id -> {helmet, seatbelt, top_speed, over}
         "banners": [],         # [(text, expire_frame)]
         "dirty_vehicles": set(),
     }
+
+
+def _update_compliance(state, riders, belts, speeds, calibrated=False):
+    """Record each vehicle's OK / violation status per category so the
+    dashboard can show COMPLIANT vehicles too, not only offenders. A
+    positive violation is sticky (once bad, stays bad); an 'ok' is only set
+    from a genuine positive detection (helmet/seatbelt actually seen) — never
+    assumed from absence, same honesty rule as the violation engine.
+
+    top_speed is recorded for every moving vehicle (accurate when calibrated,
+    approximate otherwise). The 'over the limit' flag is only set when the
+    camera is CALIBRATED — an approximate speed is shown but never asserts a
+    limit breach (that would be a guess against a driver)."""
+    comp = state["compliance"]
+
+    def slot(tid):
+        return comp.setdefault(tid, {"helmet": None, "seatbelt": None,
+                                     "top_speed": None, "over": False})
+
+    for r in riders:
+        tid = r.get("track_id")
+        if tid is None:
+            continue
+        s = slot(tid)
+        if r.get("no_helmet"):
+            s["helmet"] = "bad"
+        elif r.get("helmet_ok") and s["helmet"] != "bad":
+            s["helmet"] = "ok"
+
+    for b in (belts or []):
+        tid = b.get("track_id")
+        if tid is None:
+            continue
+        s = slot(tid)
+        if b.get("no_seatbelt"):
+            s["seatbelt"] = "bad"
+        elif b.get("seatbelt_ok") and s["seatbelt"] != "bad":
+            s["seatbelt"] = "ok"
+
+    for tid, spd in (speeds or {}).items():
+        if tid is None or not spd:
+            continue
+        s = slot(tid)
+        if s["top_speed"] is None or spd > s["top_speed"]:
+            s["top_speed"] = spd
+        if calibrated and spd > config.SPEED_LIMIT_KMPH:
+            s["over"] = True
+        state["dirty_vehicles"].add(tid)
 
 
 def _plate_note(state, tid):
@@ -739,6 +846,7 @@ def flush_vehicles(state):
             continue
         p = state["plates"].get(tid)
         ok = bool(p and p.get("confirmed"))
+        c = state["compliance"].get(tid, {})
         db.upsert_vehicle({
             "track_id": tid,
             "cls": meta["cls"],
@@ -747,6 +855,10 @@ def flush_vehicles(state):
             "plate_img": p["img"] if ok else None,
             "plate_hits": p["hits"] if ok else 0,
             "plate_note": None if ok else _plate_note(state, tid),
+            "helmet_status": c.get("helmet"),
+            "seatbelt_status": c.get("seatbelt"),
+            "top_speed": round(c["top_speed"], 1) if c.get("top_speed") else None,
+            "over_speed": 1 if c.get("over") else 0,
             "first_seen": meta["first_seen"],
             "last_seen": meta["last_seen"],
             "source": "ai",
@@ -754,7 +866,7 @@ def flush_vehicles(state):
     state["dirty_vehicles"].clear()
 
 
-def _final_plate_sweep(state):
+def final_plate_sweep(state):
     """Second pass for vehicles whose plate never confirmed: re-examine each
     track's BIGGEST captured appearance (the frame-by-frame / slow-motion
     idea) with a fresh OCR attempt. If the new read agrees with an earlier
@@ -775,12 +887,16 @@ def _final_plate_sweep(state):
             state["dirty_vehicles"].add(tid)
 
 
-def process_frame(model, engine, frame, fidx, device, helmet_model, state):
+def process_frame(model, engine, frame, fidx, device, helmet_model, state,
+                  seatbelt_model=None, frame_time=None):
     """Detection -> tracking -> ANPR -> violations for ONE frame.
 
     Logs any new violations to the DB, mutates `state` (see new_run_state)
     and returns the annotated BGR frame. Shared by file processing and live
     mode so all paths behave identically.
+
+    frame_time: real wall-clock time (seconds) of THIS frame, for accurate
+    live-camera speed; None -> frame_idx/fps (exact for video files).
     """
     res = model.track(frame, persist=True, tracker="bytetrack.yaml",
                       classes=TRACK_CLASSES, conf=config.TRACK_CONF,
@@ -788,7 +904,7 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state):
                       device=device, verbose=False)[0]
 
     video_s = round(fidx / state["fps"], 2)
-    vehicles, persons, motos, lights = [], [], [], []
+    vehicles, persons, motos, cars, lights, phones = [], [], [], [], [], []
     if res.boxes is not None:
         for b in res.boxes:
             cls = int(b.cls[0])
@@ -809,16 +925,24 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state):
                 if (cls == config.COCO["motorcycle"]
                         and conf >= config.CONF["moto_rider"]):
                     motos.append({"track_id": tid, "box": box})
+                elif (cls in config.SEATBELT_CLASSES
+                        and conf >= config.CONF["vehicle"]):
+                    cars.append({"track_id": tid, "box": box})
             elif cls == config.COCO["person"]:
                 if conf >= config.CONF["person"]:
                     persons.append({"track_id": tid, "box": box})
             elif cls == config.COCO["traffic light"]:
                 if conf >= config.CONF["light"]:
                     lights.append(box)
+            elif cls == config.COCO["cell phone"]:
+                if conf >= config.CONF["phone"]:
+                    phones.append(box)
 
     detected = detect_signal_color(frame, lights) if lights else None
     signal = engine.signal_state(fidx, detected)
     riders = build_riders(frame, motos, persons, helmet_model)
+    belts = build_seatbelt_status(frame, cars, seatbelt_model)
+    phone_status = build_phone_status(motos, cars, persons, phones)
 
     # remember each track's biggest (closest) appearance for the final
     # slow-motion plate sweep — like scrubbing the video frame by frame
@@ -841,7 +965,15 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state):
     if fidx % config.ANPR_EVERY == 0:
         _anpr_step(frame, vehicles, state, engine, fidx)
 
-    new_events = engine.update(fidx, vehicles, signal, riders)
+    new_events = engine.update(fidx, vehicles, signal, riders, belts,
+                               phone_status, frame_time)
+
+    # per-vehicle compliance (OK + violation states) for the dashboard's
+    # Vehicles tab — needs speeds, so compute them once here and reuse for
+    # both compliance and the on-screen overlay.
+    speeds = {v["track_id"]: engine.speed_of(v["track_id"]) for v in vehicles}
+    _update_compliance(state, riders, belts, speeds,
+                       calibrated=engine.transform_fn is not None)
 
     active_ids = []
     for ev in new_events:
@@ -860,6 +992,7 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state):
             "plate_conf": round(pconf, 3),
             "plate_img": pimg,
             "speed_kmph": ev.get("speed_kmph"),
+            "drive_seconds": ev.get("drive_seconds"),
             "fine": ev["fine"],
             "timestamp": ev["timestamp"],
             "frame_index": fidx,
@@ -881,129 +1014,8 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state):
     if fidx % 30 == 0:
         flush_vehicles(state)
 
-    speeds = {v["track_id"]: engine.speed_of(v["track_id"]) for v in vehicles}
     return _draw(frame, vehicles, riders, lights, signal, engine, active_ids,
-                 state, fidx, speeds)
-
-
-# ---------------------------------------------------------------------- driver
-def _clear_snapshots():
-    """Remove evidence files from previous runs so stale images never show."""
-    for f in config.SNAPSHOT_DIR.glob("*.jpg"):
-        try:
-            f.unlink()
-        except OSError:
-            pass
-
-
-def process_video(video_path, progress_cb=None, max_frames=None, every=None):
-    """Analyze a clip. `every` = analyze every Nth frame (speed mode): the
-    output video still contains every frame (skipped ones reuse the previous
-    overlay), so it plays at full length while processing is ~N times faster.
-    """
-    import cv2
-
-    vehicle_model, helmet_model = load()
-    device = resolve_device()
-    every = max(1, int(every or config.PROCESS_EVERY))
-
-    cap = cv2.VideoCapture(str(video_path))
-    if not cap.isOpened():
-        raise RuntimeError(f"Could not open video: {video_path}")
-    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
-    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
-    H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
-    total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 0
-    if max_frames:
-        total = min(total, max_frames) if total else max_frames
-
-    # per-video calibration (data/calibration.json) — honest speeds + wrong-way
-    cal_pts, cal_target, cal_dir = load_calibration(video_path, W, H)
-    engine = ViolationEngine(W, H, fps,
-                             transform_fn=make_transform_fn(cal_pts, cal_target),
-                             allowed_direction=cal_dir)
-
-    # cap the OUTPUT video size — 4K encoding is slow and the player is small
-    out_size = (W, H)
-    if W > config.OUTPUT_MAX_W:
-        out_size = (config.OUTPUT_MAX_W,
-                    int(H * config.OUTPUT_MAX_W / W) // 2 * 2)
-    writer = _make_writer(config.ANNOTATED_VIDEO, fps, out_size)
-
-    db.init_db()
-    db.clear()
-    _clear_snapshots()
-    db.set_meta("data_source", "ai")
-    db.set_meta("frame_size", [W, H])
-    db.set_meta("video_fps", round(float(fps), 2))
-    db.set_meta("device", "GPU" if device != "cpu" else "CPU")
-    db.set_meta("speed_calibrated", bool(cal_pts))
-
-    state = new_run_state(fps, frame_w=W)
-    state["speed_quad"] = cal_pts
-    state["location"] = resolve_location(video_path)
-    db.set_meta("location", state["location"])
-    fidx = 0
-    last_annot = None
-
-    # instant feedback: show frame 0 with a warm-up banner while the OCR
-    # engine loads, so the live view never looks stuck
-    _set_preview_active(True)
-    ok0, f0 = cap.read()
-    if ok0:
-        warm = f0.copy()
-        cv2.rectangle(warm, (0, H // 2 - 30), (W, H // 2 + 18), (10, 10, 10), -1)
-        cv2.putText(warm, "AI WARMING UP - loading detection + OCR models...",
-                    (24, H // 2 + 4), cv2.FONT_HERSHEY_SIMPLEX,
-                    max(0.6, W / 1600), (80, 255, 255), 2, cv2.LINE_AA)
-        _publish_preview(warm)
-        cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-    try:
-        ocr._get_reader()               # pre-warm EasyOCR before the loop
-    except Exception:
-        pass
-
-    try:
-        while True:
-            ok, frame = cap.read()
-            if not ok:
-                break
-
-            if fidx % every == 0:
-                annotated = process_frame(vehicle_model, engine, frame, fidx,
-                                          device, helmet_model, state)
-                if out_size != (W, H):
-                    annotated = cv2.resize(annotated, out_size,
-                                           interpolation=cv2.INTER_AREA)
-                last_annot = annotated
-                _publish_preview(annotated)     # live view while analyzing
-            _write_frame(writer, last_annot if last_annot is not None
-                         else (frame if out_size == (W, H)
-                               else cv2.resize(frame, out_size)))
-
-            fidx += 1
-            if fidx % 30 == 0:  # dashboard's vehicle counter grows live
-                db.set_meta("vehicle_count", len(state["vehicle_ids"]))
-            if progress_cb and total:
-                progress_cb(fidx, total)
-            if max_frames and fidx >= max_frames:
-                break
-    finally:
-        _set_preview_active(False)
-
-    cap.release()
-    _close_writer(writer)
-
-    _final_plate_sweep(state)           # slow-motion pass on unread plates
-    flush_vehicles(state)
-    db.set_meta("vehicle_count", len(state["vehicle_ids"]))
-    db.set_meta("processed_at", datetime.datetime.now().isoformat(timespec="seconds"))
-    export_results_json()
-
-    return {"frames": fidx, "vehicles": len(state["vehicle_ids"]),
-            "violations": len(engine.events), "every": every,
-            "plates": sum(1 for p in state["plates"].values()
-                          if p.get("confirmed"))}
+                 state, fidx, speeds, belts, phone_status)
 
 
 def export_results_json():

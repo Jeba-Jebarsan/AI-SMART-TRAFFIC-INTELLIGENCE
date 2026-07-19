@@ -39,7 +39,6 @@
   .chip.ok{color:var(--green);border-color:rgba(34,197,94,.4)}
   .chip.off{color:var(--muted);opacity:.7}
   .chip.src-ai{color:#4ade80;border-color:rgba(34,197,94,.55);background:rgba(34,197,94,.10)}
-  .chip.src-demo{color:var(--amber);border-color:rgba(245,158,11,.55);background:rgba(245,158,11,.10)}
   .chip.src-none{color:var(--muted)}
   .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--red);
     margin-right:6px;box-shadow:0 0 0 0 rgba(239,68,68,.7);animation:pulse 1.6s infinite;vertical-align:1px}
@@ -253,49 +252,39 @@
   <!-- LEFT -->
   <div style="display:flex;flex-direction:column;gap:14px">
     <div class="panel">
-      <div class="phead">📹 Camera 14 — Annotated AI Feed
-        <span class="tag" id="vidtag">no processed video yet</span></div>
+      <div class="phead">📹 Live Feed
+        <span class="tag" id="vidtag">not live yet</span></div>
       <div class="videowrap" id="videowrap">
         <img id="liveimg" alt="live feed"
              style="display:none;width:100%;height:100%;object-fit:contain;background:#000" />
         <div class="placeholder" id="vidph">
-          <div class="big">🎞️</div>
-          <div><b>Upload a clip</b>, run a <b>sample</b>, paste a <b>URL</b>, or go <b>LIVE</b> from a camera.<br>
-          Every box, plate and violation you'll see is a real model output.</div>
+          <div class="big">📹</div>
+          <div>Go <b>LIVE</b> from a camera, or replay a <b>sample</b> clip live.<br>
+          Every box, plate and violation you'll see is a real model output — live only, no file upload.</div>
         </div>
         <div class="scanline"></div>
         <div id="livebadge" style="display:none;position:absolute;left:12px;top:12px;
           background:rgba(239,68,68,.92);color:#fff;font-size:11px;font-weight:700;
           padding:4px 10px;border-radius:999px;letter-spacing:.5px">● LIVE CAMERA</div>
-        <div id="prevbadge" style="display:none;position:absolute;left:12px;top:12px;
-          background:rgba(34,211,238,.92);color:#04121a;font-size:11px;font-weight:800;
-          padding:4px 10px;border-radius:999px;letter-spacing:.5px">🔎 ANALYZING — LIVE AI VIEW</div>
       </div>
       <div class="uprow first">
-        <input type="file" id="file" accept="video/*" />
-        <button class="btn" id="analyze">▶ Analyze Video</button>
-        <select class="tin" id="sample" style="max-width:190px"><option value="">— sample clips —</option></select>
-        <button class="btn ghost" id="runSample">▶ Run Sample</button>
-        <button class="btn warn" id="playLive" title="Play this clip like a live CCTV feed — detections, plates and violations land in real time as it plays (once, no loop)">🎬 Play Live</button>
-        <select class="tin" id="speedmode" title="Analysis speed: every Nth frame is analyzed — output video stays full length">
+        <input type="text" id="camsrc" value="0" class="tin" style="width:220px"
+          title="0 = default webcam · or 1,2… · or rtsp://… · or http://…mjpg" />
+        <button class="btn warn" id="golive">📹 Go Live</button>
+        <button class="btn ghost" id="stoplive" disabled>⏹ Stop</button>
+        <select class="tin" id="speedmode" title="Live processing speed: every Nth frame is analyzed, so the feed keeps up on slower hardware">
           <option value="1">🐢 Accurate (every frame)</option>
           <option value="2" selected>⚡ Fast (2x)</option>
           <option value="3">🚀 Turbo (3x)</option>
         </select>
-        <button class="btn ghost tiny" id="calibrate" title="Click 4 road points on a sample clip to enable real speed measurement">🎯 Speed setup</button>
       </div>
       <div class="uprow">
-        <input type="text" id="url" placeholder="Paste YouTube / video URL…" class="tin" style="flex:1;min-width:170px" />
-        <button class="btn" id="analyzeUrl">🔗 Analyze URL</button>
-        <input type="text" id="camsrc" value="0" class="tin" style="width:110px"
-          title="0 = default webcam · or 1,2… · or rtsp://… / http://…" />
-        <button class="btn warn" id="golive">📹 Go Live</button>
-        <button class="btn ghost" id="stoplive" disabled>⏹ Stop</button>
+        <select class="tin" id="sample" style="max-width:190px"><option value="">— sample clips —</option></select>
+        <button class="btn warn" id="playLive" title="Replay this clip like a live CCTV feed — detections, plates and violations land in real time as it plays (once, no loop)">🎬 Play Live (sample)</button>
+        <button class="btn ghost tiny" id="calibrate" title="Click 4 road points on the LIVE camera (or a sample clip) to enable real speed measurement + wrong-way direction">🎯 Speed setup</button>
       </div>
       <div class="uprow">
-        <div class="progress" id="prog"><i id="progbar"></i></div>
         <span id="progtxt" style="font-size:12px;color:var(--muted);flex:1"></span>
-        <button class="btn tiny ghost" id="seed" title="Loads clearly-badged SIMULATED data as a presentation fallback">✨ Demo data (simulated)</button>
         <button class="btn tiny ghost" id="clearall">🗑 Clear</button>
       </div>
     </div>
@@ -349,19 +338,27 @@
           <option>Over Speeding</option>
           <option>Wrong Way</option>
           <option>Triple Riding</option>
+          <option>No Seatbelt</option>
+          <option>No Rest Break</option>
+          <option>Wheelie Stunt</option>
+          <option>Mobile Phone Use</option>
         </select>
       </div>
+      <div id="typechips" style="display:none;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--panel-brd)"></div>
       <div class="feed" id="feed"></div>
     </div>
     <div id="pane-anpr" style="display:none;max-height:640px;overflow-y:auto">
+      <div id="vchips" style="display:none;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--panel-brd);position:sticky;top:0;background:var(--bg2);z-index:2"></div>
       <table class="vtable">
-        <thead><tr><th>ID</th><th>Type</th><th>Number plate</th><th>Conf</th><th>Seen</th></tr></thead>
+        <thead><tr><th>ID</th><th>Type</th><th>Number plate</th><th>Conf</th><th>Status</th><th>Seen</th></tr></thead>
         <tbody id="vbody"></tbody>
       </table>
       <div class="empty" id="vempty" style="display:none">
         <div class="big">🚘</div>
-        Plates appear here for <b>every tracked vehicle</b> — not just violators.<br>
-        Run a clip where plates face the camera (≤ ~15 m works best).
+        Every tracked vehicle appears here — not just violators — with its
+        <b>compliance status</b> (Helmet OK / ✗, Seatbelt, Speed) and plate.<br>
+        Use the chips above to see all vehicles assessed for a category.
+        Get plates/helmets close to the camera (≤ ~15 m works best).
       </div>
     </div>
   </div>
@@ -442,7 +439,8 @@
         Click <b style="color:var(--txt)">4 corners of a road rectangle</b> in this order:
         <b style="color:var(--cyan)">1 far-left → 2 far-right → 3 near-right → 4 near-left</b>,
         then enter its real size in metres (lane width ≈ 3.5 m per lane; use lane
-        markings: gap+line ≈ 12 m in LK). Speed &amp; over-speed violations activate on the next run of this clip.
+        markings: gap+line ≈ 12 m in LK). On a <b>live stream</b> it applies
+        instantly; on a sample clip it activates the next run.
       </div>
       <canvas id="calcanvas" style="width:100%;border-radius:10px;border:1px solid var(--panel-brd);cursor:crosshair"></canvas>
       <div style="display:flex;gap:10px;align-items:center;margin-top:12px;flex-wrap:wrap">
@@ -482,7 +480,8 @@ let VEHS = [];                        // current vehicles list
 
 const COLORS = {
   "No Helmet":"#f59e0b","Red Light Jump":"#ef4444","Over Speeding":"#a855f7",
-  "Wrong Way":"#3b82f6","Triple Riding":"#14b8a6"
+  "Wrong Way":"#3b82f6","Triple Riding":"#14b8a6","No Seatbelt":"#eab308",
+  "No Rest Break":"#f97316","Wheelie Stunt":"#ec4899","Mobile Phone Use":"#06b6d4"
 };
 const CLS_EMOJI = {Car:"🚗",Motorcycle:"🏍",Bus:"🚌",Truck:"🚚",Bicycle:"🚲"};
 
@@ -512,8 +511,7 @@ function animate(el,to,prefix=""){
 /* ---------- header chips ---------- */
 function renderChips(s){
   const src=$("#chip-src");
-  if(s.data_source==="ai"){src.className="chip src-ai";src.innerHTML='<span class="dot g"></span>REAL AI RESULTS';}
-  else if(s.data_source==="demo"){src.className="chip src-demo";src.textContent="◆ SIMULATED DEMO DATA";}
+  if(s.data_source==="ai"){src.className="chip src-ai";src.innerHTML='<span class="dot g"></span>LIVE AI RESULTS';}
   else {src.className="chip src-none";src.textContent="○ NO DATA YET";}
   $("#chip-helmet").className="chip "+(s.helmet_model?"ok":"off");
   $("#chip-helmet").textContent="HELMET AI "+(s.helmet_model?"✓":"–");
@@ -533,6 +531,10 @@ function renderChips(s){
 /* ---------- stats + charts ---------- */
 function renderStats(s){
   META=s;CUR=s.currency||"Rs. ";
+  // pick up colours for any violation type from the server (so new rules like
+  // Wheelie Stunt / Mobile Phone Use render in their configured colour, not grey)
+  if(s.violation_meta)for(const[t,m]of Object.entries(s.violation_meta))
+    if(m&&m.color&&!COLORS[t])COLORS[t]=m.color;
   renderChips(s);
   $("#loc").textContent=s.location||"—";
   $("#pat").textContent=s.processed_at?("updated "+fmtTime(s.processed_at)):"standby";
@@ -544,17 +546,44 @@ function renderStats(s){
   $("#c-vio-s").textContent=Object.keys(s.by_type||{}).length+" active categories";
   $("#c-plate-s").textContent=(s.vehicle_rows||0)+" vehicles logged";
 
-  if(s.annotated_video && !LIVE_ON && !PREV_ON){
-    $("#vidtag").textContent="H.264 annotated output";
-    if(!$("#feedvideo")){
-      $("#vidph").style.display="none";
-      const v=document.createElement("video");
-      v.id="feedvideo";v.src=s.annotated_video+"?t="+Date.now();
-      v.controls=true;v.autoplay=true;v.loop=true;v.muted=true;
-      $("#videowrap").insertBefore(v,$("#videowrap").firstChild);
-    }
-  }
+  renderTypeChips(s.by_type||{});
   renderDonut(s.by_type||{},s.total_violations||0);
+}
+
+/* one-click per-type filtering: tap a chip (or a donut-legend row) to see
+   ONLY that violation type in the feed; tap again for all */
+function setTypeFilter(t){
+  FT.type=(FT.type===t)?"":t;
+  $("#ftype").value=FT.type;
+  refresh();
+}
+function renderTypeChips(byType){
+  const el=$("#typechips");
+  // Show a chip for EVERY violation type the system can detect (from the
+  // server's violation_meta), not only the ones seen so far — so the category
+  // filters are ALWAYS visible and clickable, with a live count (0 until one
+  // is detected). Detected-first ordering keeps active categories on the left.
+  const all=Object.keys(META.violation_meta||{});
+  const seen=new Set(all);
+  for(const t of Object.keys(byType))if(!seen.has(t)){all.push(t);seen.add(t);}
+  if(!all.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="flex";
+  const cnt=t=>(byType[t]&&byType[t].count)||0;
+  all.sort((a,b)=>cnt(b)-cnt(a));
+  const total=all.reduce((n,t)=>n+cnt(t),0);
+  const chip=(val,label,n,col)=>{
+    const on=(FT.type===val)||(val===""&&!FT.type);
+    const dim=(val&&!n)?0.55:1;                 // fade zero-count categories a touch
+    return `<span data-t="${val}" style="cursor:pointer;font-size:11.5px;font-weight:700;
+      padding:4px 11px;border-radius:999px;user-select:none;opacity:${dim};
+      border:1px solid ${on?col:"var(--panel-brd)"};
+      background:${on?col+"2e":"transparent"};
+      color:${on?col:"var(--muted)"}">${esc(label)}&nbsp;<b>${n}</b></span>`;
+  };
+  let h=chip("","All",total,"#8b97ad");
+  for(const t of all)h+=chip(t,t,cnt(t),COLORS[t]||"#64748b");
+  el.innerHTML=h;
+  el.querySelectorAll("[data-t]").forEach(c=>c.onclick=()=>setTypeFilter(c.dataset.t));
 }
 
 function renderDonut(byType,total){
@@ -568,13 +597,15 @@ function renderDonut(byType,total){
     stops.push(`${col} ${acc}% ${acc+frac}%`);acc+=frac;
     const fineTxt=CUR+(info.fines||0).toLocaleString('en-US');
     leg.insertAdjacentHTML("beforeend",
-      `<div class="legrow"><span class="sw" style="background:${col}"></span>
+      `<div class="legrow" data-t="${esc(type)}" style="cursor:pointer" title="Show only ${esc(type)} in the feed">
+        <span class="sw" style="background:${col}"></span>
         <span class="nm">${esc(type)}<div class="bar"><i style="width:${info.count/max*100}%;background:${col}"></i></div></span>
         <span class="ct">${info.count}<div class="sub">${fineTxt}</div></span></div>`);
   }
+  leg.querySelectorAll(".legrow").forEach(r=>r.onclick=()=>setTypeFilter(r.dataset.t));
   if(!stops.length)stops=["#334155 0 100%"];
   $("#donut").style.background=`conic-gradient(${stops.join(",")})`;
-  $("#anatag").textContent=(META.data_source==="demo"?"simulated data · ":"")+entries.length+" violation types";
+  $("#anatag").textContent=entries.length+" violation types";
 }
 
 /* ---------- timeline chart (canvas, no libs) ---------- */
@@ -657,10 +688,8 @@ function renderHotspot(list){
 function renderInsights(s,list){
   const box=$("#insights");const out=[];
   const total=s.total_violations||0;
-  if(s.data_source==="demo")
-    out.push(["🟡","<b>Simulated demo data</b> is loaded — run a real video for live AI results."]);
   if(!total&&!(s.vehicle_rows||0)){
-    if(s.data_source!=="demo")out.push(["🤖","Run a video and I'll summarise what the AI found here."]);
+    out.push(["🤖","Go Live from a camera and I'll summarise what the AI finds here in real time."]);
   }else{
     const types=Object.entries(s.by_type||{}).sort((a,b)=>b[1].count-a[1].count);
     if(types.length){
@@ -680,12 +709,18 @@ function renderInsights(s,list){
     }
     if(s.avg_over_speed)
       out.push(["🏎",`Average speed among speeders: <b>${s.avg_over_speed} km/h</b> in a ${s.speed_limit||60} km/h zone.`]);
+    if(s.max_speed){
+      const f=(s.top_speeds||[])[0]||{};
+      const who=f.plate&&f.plate!=="UNKNOWN"?esc(f.plate):(f.cls||"Vehicle")+" #"+(f.track_id??"?");
+      const ap=s.speed_calibrated?"":"~";
+      out.push(["⚡",`Highest speed recorded: <b>${ap}${s.max_speed} km/h</b> — ${who}${f.over_speed?` (over the ${s.speed_limit||60} km/h limit)`:``}${s.speed_calibrated?``:` (approx — calibrate with 🎯 for exact)`}.`]);
+    }
     if((s.repeat_offenders||[]).length){
       const r=s.repeat_offenders[0];
       out.push(["🔁",`<b>${s.repeat_offenders.length}</b> repeat offender${s.repeat_offenders.length>1?"s":""} — ${esc(r.plate)} has ${r.n} violations (${CUR}${(r.f||0).toLocaleString('en-US')}).`]);
     }
     const unk=list.filter(v=>!v.plate||v.plate==="UNKNOWN").length;
-    if(total&&unk&&s.data_source==="ai")
+    if(total&&unk)
       out.push(["🛈",`${unk} challan${unk>1?"s":""} pending manual plate review (plate too far / unreadable — never guessed).`]);
   }
   box.innerHTML=out.map(([e,t])=>`<div class="irow"><span class="ie">${e}</span><span>${t}</span></div>`).join("")
@@ -698,8 +733,8 @@ function renderFeed(list){
   const feed=$("#feed");
   if(!list.length){
     feed.innerHTML=`<div class="empty"><div class="big">✅</div>
-      No violations${META.data_source==="ai"?" detected in this footage":" yet"}.<br>
-      Upload a clip or go live to start detection.</div>`;
+      No violations detected yet.<br>
+      Go Live from a camera, or Play Live a sample, to start detection.</div>`;
     return;
   }
   const frag=document.createDocumentFragment();
@@ -717,7 +752,7 @@ function renderFeed(list){
       <div class="mid">
         <div class="plate mono ${unk?"unk":""}">${unk?"PLATE UNREADABLE":esc(v.plate)}</div>
         <div class="sub">${fmtTime(v.timestamp)}${v.video_s!=null?` · ${fmtVS(v.video_s)}`:""}
-          · <span style="color:${col}">${esc(v.type)}</span>${v.speed_kmph?(" · "+v.speed_kmph+" km/h"):""}</div>
+          · <span style="color:${col}">${esc(v.type)}</span>${v.speed_kmph?(" · "+v.speed_kmph+" km/h"):""}${v.drive_seconds?(" · "+Math.round(v.drive_seconds/60)+" min non-stop"):""}</div>
       </div>
       <div style="text-align:right">
         <span class="badge" style="background:${col}22;color:${col}">${esc(v.type)}</span>
@@ -730,13 +765,71 @@ function renderFeed(list){
 }
 
 /* ---------- vehicles / ANPR pane ---------- */
+let VFILTER="";                         // vehicles-tab compliance category filter
+
+// small OK/violation/measurement pill for the Status column
+function statusPill(label,state,extra){
+  if(state==null&&extra==null)return "";
+  let col,txt;
+  if(extra!=null){ col=extra.over?"#ef4444":"#4ade80"; txt=label+" "+extra.val; }
+  else if(state==="ok"){ col="#4ade80"; txt=label+" OK"; }
+  else if(state==="bad"){ col="#ef4444"; txt=label+" ✗"; }
+  else return "";
+  return `<span style="display:inline-block;font-size:10px;font-weight:700;
+    padding:2px 7px;border-radius:999px;margin:1px 3px 1px 0;
+    background:${col}22;color:${col};border:1px solid ${col}55">${txt}</span>`;
+}
+
+// which compliance categories a vehicle was actually ASSESSED for
+function vehCats(v){
+  const c=new Set();
+  if(v.helmet_status)c.add("helmet");
+  if(v.seatbelt_status)c.add("seatbelt");
+  if(v.top_speed!=null)c.add("speed");
+  return c;
+}
+
+function renderVehicleChips(list){
+  const el=$("#vchips");
+  const counts={helmet:0,seatbelt:0,speed:0};
+  for(const v of list){const c=vehCats(v);
+    if(c.has("helmet"))counts.helmet++;
+    if(c.has("seatbelt"))counts.seatbelt++;
+    if(c.has("speed"))counts.speed++;}
+  const cats=[["","All","#8b97ad",list.length],
+    ["helmet","🪖 Helmet","#f59e0b",counts.helmet],
+    ["seatbelt","🔗 Seatbelt","#eab308",counts.seatbelt],
+    ["speed","🏎 Speed","#a855f7",counts.speed]];
+  // ALWAYS show the filter bar when there are vehicles (even if nothing has
+  // been assessed yet) so the category filters are visible + clickable; a
+  // zero-count category is faded, not hidden.
+  if(!list.length){el.style.display="none";el.innerHTML="";return;}
+  el.style.display="flex";
+  el.innerHTML=cats.map(([val,label,col,n])=>{
+    const on=(VFILTER===val);
+    const dim=(val&&!n)?0.55:1;
+    return `<span data-v="${val}" style="cursor:pointer;font-size:11.5px;font-weight:700;
+      padding:4px 11px;border-radius:999px;user-select:none;opacity:${dim};
+      border:1px solid ${on?col:"var(--panel-brd)"};
+      background:${on?col+"2e":"transparent"};
+      color:${on?col:"var(--muted)"}">${label}&nbsp;<b>${n}</b></span>`;
+  }).join("");
+  el.querySelectorAll("[data-v]").forEach(c=>c.onclick=()=>{
+    VFILTER=(VFILTER===c.dataset.v)?"":c.dataset.v;renderVehicles(VEHS);});
+}
+
 function renderVehicles(list){
+  renderVehicleChips(list);
+  if(VFILTER)list=list.filter(v=>vehCats(v).has(VFILTER));
   $("#anprcount").textContent=list.length?`(${list.length})`:"";
   const tb=$("#vbody");tb.innerHTML="";
   $("#vempty").style.display=list.length?"none":"block";
   for(const v of list){
     const has=v.plate&&v.plate!=="UNKNOWN";
     const conf=v.plate_conf?Math.min(v.plate_conf,1):0;
+    const status=statusPill("🪖",v.helmet_status)
+      +statusPill("🔗",v.seatbelt_status)
+      +(v.top_speed!=null?statusPill("🏎",null,{val:(META.speed_calibrated?"":"~")+v.top_speed+"km/h",over:v.over_speed}):"");
     const tr=document.createElement("tr");
     tr.style.cursor="pointer";
     tr.title="Click to view the captured plate image";
@@ -747,6 +840,7 @@ function renderVehicles(list){
       <td>${has?`<span class="platechip">${esc(v.plate)}</span>`
         :`<span style="color:var(--muted);font-size:10.5px;font-style:italic">${esc(v.plate_note||"—")}</span>`}</td>
       <td>${has?`<span class="confbar"><i style="width:${conf*100}%"></i></span>${Math.round(conf*100)}%${v.plate_hits>1?` <span style="color:var(--green);font-size:10px">×${v.plate_hits}</span>`:""}`:""}</td>
+      <td>${status||'<span style="color:var(--muted)">—</span>'}</td>
       <td style="color:var(--muted)">${v.last_seen!=null?esc(v.last_seen)+"s":""}</td>`;
     tb.appendChild(tr);
   }
@@ -786,8 +880,8 @@ function openChallan(v){
   else vsr.style.display="none";
   $("#ch-loc").textContent=v.location||META.location||"—";
   $("#ch-conf").textContent=v.plate_conf?Math.round(Math.min(v.plate_conf,1)*100)+"%":"—";
-  $("#ch-src").textContent=v.source==="demo"?"SIMULATED (demo)":"AI detection";
-  $("#ch-src").style.color=v.source==="demo"?"var(--amber)":"var(--green)";
+  $("#ch-src").textContent="Live AI detection";
+  $("#ch-src").style.color="var(--green)";
   const sr=$("#ch-speed-row");
   if(v.speed_kmph){sr.style.display="";$("#ch-speed").textContent=v.speed_kmph+" km/h (limit "+(META.speed_limit||60)+")";}
   else sr.style.display="none";
@@ -823,8 +917,10 @@ $("#csv").onclick=()=>{
   const anpr=$("#pane-anpr").style.display!=="none";
   let rows,head,name;
   if(anpr){
-    head=["track_id","class","plate","confidence","first_seen_s","last_seen_s"];
-    rows=VEHS.map(v=>[v.track_id,v.cls,v.plate||"",v.plate_conf||"",v.first_seen,v.last_seen]);
+    head=["track_id","class","plate","confidence","helmet","seatbelt","top_speed_kmph","over_speed","first_seen_s","last_seen_s"];
+    rows=VEHS.map(v=>[v.track_id,v.cls,v.plate||"",v.plate_conf||"",
+      v.helmet_status||"",v.seatbelt_status||"",v.top_speed??"",v.over_speed?"yes":"",
+      v.first_seen,v.last_seen]);
     name="anpr_vehicles.csv";
   }else{
     head=["challan_id","type","plate","plate_conf","speed_kmph","fine","timestamp","video_s","location","status","source"];
@@ -870,54 +966,15 @@ $("#q").oninput=e=>{FT.q=e.target.value.trim();refresh();};
 $("#ftype").onchange=e=>{FT.type=e.target.value;refresh();};
 
 /* ---------- actions ---------- */
-$("#seed").onclick=async()=>{
-  if(!confirm("Load SIMULATED demo data?\n\nIt is clearly badged as simulated and replaces current results."))return;
-  toast("Generating simulated demo data…");
-  try{await fetch(API+"/api/seed",{method:"POST"});known.clear();
-    const fv=$("#feedvideo");if(fv)fv.remove();
-    await refresh();toast("Simulated data loaded (badged in header)");}
-  catch(e){toast("Seed failed: "+e.message);}
-};
-
 $("#clearall").onclick=async()=>{
   if(!confirm("Clear ALL results and evidence?"))return;
   try{await fetch(API+"/api/reset",{method:"POST"});known.clear();
-    const fv=$("#feedvideo");if(fv)fv.remove();
-    $("#vidph").style.display="";$("#vidtag").textContent="no processed video yet";
+    $("#vidph").style.display="";$("#vidtag").textContent="not live yet";
     await refresh();toast("Cleared");}
   catch(e){toast("Clear failed: "+e.message);}
 };
 
-function jobStarted(){known.clear();$("#prog").style.display="block";}
 function speedEvery(){return parseInt($("#speedmode").value)||2;}
-
-/* live AI view while a job is processing (MJPEG of annotated frames) */
-let PREV_ON=false;
-function showPreview(on){
-  if(on===PREV_ON)return;
-  PREV_ON=on;
-  let img=$("#previmg");
-  const fv=$("#feedvideo");
-  if(on){
-    $("#vidph").style.display="none";if(fv)fv.style.display="none";
-    if(!img){
-      img=document.createElement("img");
-      img.id="previmg";
-      img.style.cssText="width:100%;height:100%;object-fit:contain;background:#000";
-      img.onerror=()=>{ // MJPEG dropped (model still loading) — reconnect
-        if(PREV_ON)setTimeout(()=>{if(PREV_ON)img.src=API+"/api/preview.mjpg?t="+Date.now();},1500);
-      };
-      $("#videowrap").insertBefore(img,$("#videowrap").firstChild);
-    }
-    img.src=API+"/api/preview.mjpg?t="+Date.now();img.style.display="block";
-    $("#prevbadge").style.display="block";
-    $("#vidtag").textContent="live AI analysis in progress";
-  }else{
-    if(img){img.src="";img.remove();}
-    $("#prevbadge").style.display="none";
-    if(fv)fv.style.display="";
-  }
-}
 
 /* editable camera location (auto-detects from video GPS when present) */
 $("#editloc").onclick=async()=>{
@@ -932,93 +989,19 @@ $("#editloc").onclick=async()=>{
   }catch(e){toast("Failed: "+e.message);}
 };
 
-$("#analyze").onclick=async()=>{
-  const f=$("#file").files[0];
-  if(!f){toast("Choose a video file first");return;}
-  const fd=new FormData();fd.append("file",f);fd.append("every",speedEvery());
-  $("#analyze").disabled=true;jobStarted();
-  $("#progtxt").textContent="uploading…";
-  try{
-    const r=await fetch(API+"/api/process",{method:"POST",body:fd});
-    const {job_id}=await r.json();
-    poll(job_id,"#analyze");
-  }catch(e){toast("Upload failed: "+e.message);$("#analyze").disabled=false;}
-};
-
-$("#runSample").onclick=async()=>{
-  const name=$("#sample").value;
-  if(!name){toast("Pick a sample clip first");return;}
-  $("#runSample").disabled=true;jobStarted();
-  $("#progtxt").textContent="starting "+name+"…";
-  try{
-    const r=await fetch(API+"/api/process_local",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({name,every:speedEvery()})});
-    const {job_id}=await r.json();
-    poll(job_id,"#runSample");
-  }catch(e){toast("Failed: "+e.message);$("#runSample").disabled=false;}
-};
-
-async function poll(job, btnSel="#analyze"){
-  try{
-    const j=await getJSON("/api/process/"+job);
-    if(j.status==="downloading"){
-      $("#progbar").style.width="8%";
-      $("#progtxt").textContent="downloading video…";
-      setTimeout(()=>poll(job,btnSel),900);return;
-    }
-    if(j.status==="processing"||j.status==="queued"){
-      $("#progbar").style.width=(j.progress||0)+"%";
-      $("#progtxt").textContent=j.status==="queued"?"starting AI…"
-        :`analyzing ${j.current||0}/${j.total||"?"} frames (${j.progress||0}%)`;
-      if(!LIVE_ON)showPreview(true);            // watch the AI work live
-      await refresh();                       // feed grows live as violations land
-      setTimeout(()=>poll(job,btnSel),900);
-    }else if(j.status==="done"){
-      showPreview(false);
-      $("#progbar").style.width="100%";
-      const s=j.summary||{};
-      $("#progtxt").textContent=`done · ${s.violations??0} violations · ${s.vehicles??0} vehicles · ${s.plates??0} plates read`;
-      $(btnSel).disabled=false;
-      const fv=$("#feedvideo");if(fv)fv.remove();  // reload fresh annotated video
-      await refresh();toast("Analysis complete ✔");
-      setTimeout(()=>{$("#prog").style.display="none";},4000);
-    }else{
-      showPreview(false);
-      $("#progtxt").textContent="error: "+(j.error||"unknown");
-      $(btnSel).disabled=false;
-      toast("Processing error — check the server console");
-    }
-  }catch(e){$(btnSel).disabled=false;}
-}
-
-/* ---------- analyze from URL (YouTube etc.) ---------- */
-$("#analyzeUrl").onclick=async()=>{
-  const url=$("#url").value.trim();
-  if(!url){toast("Paste a video URL first");return;}
-  $("#analyzeUrl").disabled=true;jobStarted();
-  $("#progtxt").textContent="downloading…";
-  try{
-    const r=await fetch(API+"/api/process_url",{method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({url,every:speedEvery()})});
-    const {job_id}=await r.json();poll(job_id,"#analyzeUrl");
-  }catch(e){toast("URL failed: "+e.message);$("#analyzeUrl").disabled=false;}
-};
-
-/* ---------- live camera ---------- */
+/* ---------- live camera / sample replay ---------- */
 function showLive(on){
   LIVE_ON=on;
-  const img=$("#liveimg"),fv=$("#feedvideo");
+  const img=$("#liveimg");
   if(on){
-    $("#vidph").style.display="none";if(fv)fv.style.display="none";
+    $("#vidph").style.display="none";
     img.src=API+"/api/live.mjpg?t="+Date.now();img.style.display="block";
-    $("#livebadge").style.display="block";$("#vidtag").textContent="live camera stream";
-    $("#golive").disabled=true;$("#stoplive").disabled=false;
+    $("#livebadge").style.display="block";$("#vidtag").textContent="live stream";
+    $("#golive").disabled=true;$("#playLive").disabled=true;$("#stoplive").disabled=false;
   }else{
     img.style.display="none";img.src="";$("#livebadge").style.display="none";
-    if(fv)fv.style.display="";
-    $("#golive").disabled=false;$("#stoplive").disabled=true;
+    $("#vidtag").textContent="not live yet";
+    $("#golive").disabled=false;$("#playLive").disabled=false;$("#stoplive").disabled=true;
   }
 }
 
@@ -1026,9 +1009,13 @@ async function startLive(source,label){
   toast("Starting "+label+"…");
   try{
     const r=await fetch(API+"/api/live/start",{method:"POST",
-      headers:{"Content-Type":"application/json"},body:JSON.stringify({source})});
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({source,every:speedEvery()})});
     const j=await r.json();
-    if(j.status==="error"){toast("Error: "+(j.error||""));return;}
+    if(!j.started){
+      toast(j.status==="error"?"Error: "+(j.error||""):"Already live — stop the current stream first");
+      return;
+    }
     known.clear();showLive(true);await refresh();liveWatch();
   }catch(e){toast("Live failed: "+e.message);}
 }
@@ -1049,7 +1036,7 @@ async function liveWatch(){
     const s=await getJSON("/api/live/status");
     if(s.status==="error"){showLive(false);toast("Camera error: "+(s.error||""));return;}
     if(s.status==="live"||s.status==="starting"){setTimeout(liveWatch,2500);}
-    else{showLive(false);}
+    else{showLive(false);await refresh();}
   }catch(e){setTimeout(liveWatch,2500);}
 }
 
@@ -1090,10 +1077,11 @@ function calDraw(){
   $("#cal-count").textContent=CAL.points.length+" / 4 points";
 }
 $("#calibrate").onclick=async()=>{
+  const live=LIVE_ON;                       // live stream running -> calibrate IT
   const name=$("#sample").value;
-  if(!name){toast("Pick a sample clip first — calibration is per-video");return;}
-  CAL.video=name;CAL.points=[];
-  $("#cal-video").textContent=name.length>30?name.slice(0,28)+"…":name;
+  if(!live&&!name){toast("Go Live first to calibrate the camera, or pick a sample clip");return;}
+  CAL.video=live?"live":name;CAL.points=[];
+  $("#cal-video").textContent=live?"● LIVE CAMERA":(name.length>30?name.slice(0,28)+"…":name);
   const img=new Image();
   img.onload=()=>{
     CAL.img=img;CAL.natW=img.naturalWidth;CAL.natH=img.naturalHeight;
@@ -1102,8 +1090,9 @@ $("#calibrate").onclick=async()=>{
     $("#caloverlay").classList.add("on");
     calDraw();
   };
-  img.onerror=()=>toast("Could not load a frame from that clip");
-  img.src=API+"/api/frame?name="+encodeURIComponent(name)+"&t="+Date.now();
+  img.onerror=()=>toast(live?"No live frame yet — wait a moment after Go Live and retry":"Could not load a frame from that clip");
+  img.src=API+(live?"/api/live/frame?t="+Date.now()
+                   :"/api/frame?name="+encodeURIComponent(name)+"&t="+Date.now());
 };
 $("#calcanvas").onclick=e=>{
   if(CAL.points.length>=4)return;
@@ -1131,8 +1120,12 @@ $("#calSave").onclick=async()=>{
       body:JSON.stringify({video:CAL.video,points:hasQuad?CAL.points:[],
         target_m:hasQuad?[w,l]:[],direction:dir})});
     if(!r.ok)throw new Error(r.status);
+    const j=await r.json();
     $("#caloverlay").classList.remove("on");
-    toast("Saved ✔ Re-run the clip — "+(hasQuad?"speed":"")+(hasQuad&&dir.length?" + ":"")+(dir.length?"wrong-way":"")+" active");
+    const what=(hasQuad?"speed":"")+(hasQuad&&dir.length?" + ":"")+(dir.length?"wrong-way":"");
+    toast(CAL.video==="live"
+      ?(j.applied?"Saved ✔ "+what+" active NOW on the live stream":"Saved ✔ "+what+" applies next Go Live")
+      :"Saved ✔ Re-run the clip — "+what+" active");
   }catch(e){toast("Save failed: "+e.message);}
 };
 

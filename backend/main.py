@@ -1,20 +1,17 @@
 """
 FastAPI app: serves the dashboard + a small JSON API.
 
-Crucially, importing this module pulls in NONE of the ML stack. The server,
-the dashboard and the seed data all run with just fastapi + uvicorn installed.
-Only POST /api/process imports the heavy pipeline, and it does so lazily inside
-a background thread.
+Crucially, importing this module pulls in NONE of the ML stack. The server
+and the dashboard run with just fastapi + uvicorn installed. Only live mode
+(backed by live.py) imports the heavy pipeline, and it does so lazily inside
+a background thread — there is no file-upload / batch-analysis path, this
+platform is LIVE ONLY (IP camera, RTSP/HTTP stream, or webcam).
 """
-import glob
 import os
-import shutil
-import threading
 import time
-import uuid
 from typing import Optional
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -26,13 +23,9 @@ import db
 import live as live_mod
 
 
-class UrlIn(BaseModel):
-    url: str
-    every: int = 0            # 0 = use config.PROCESS_EVERY
-
-
 class LiveIn(BaseModel):
     source: str = "0"
+    every: int = 0            # 0 = use config.PROCESS_EVERY
 
 
 class CalibIn(BaseModel):
@@ -49,11 +42,8 @@ app.add_middleware(
 
 db.init_db()
 
-# Serve evidence snapshots + the annotated video under /media
+# Serve evidence snapshots under /media
 app.mount("/media", StaticFiles(directory=str(config.OUTPUT_DIR)), name="media")
-
-# In-memory job registry for the "processing…" progress bar
-JOBS: dict = {}
 
 
 @app.get("/", response_class=HTMLResponse)
@@ -67,8 +57,6 @@ def index():
 @app.get("/api/stats")
 def api_stats():
     s = db.stats()
-    s["annotated_video"] = ("/media/annotated.mp4"
-                            if config.ANNOTATED_VIDEO.exists() else None)
     s["helmet_model"] = os.path.exists(config.HELMET_MODEL)
     s["plate_model"] = os.path.exists(config.PLATE_MODEL)
     s["fines"] = config.FINES
@@ -117,27 +105,9 @@ def api_reset():
 
 @app.get("/api/samples")
 def api_samples():
-    """Bundled clips in data/videos — one-click demo material."""
+    """Bundled clips in data/videos — picked from the 🎬 Play Live selector."""
     vids = sorted(config.VIDEO_DIR.glob("*.mp4"))
     return [v.name for v in vids if v.name != "annotated.mp4"]
-
-
-class LocalIn(BaseModel):
-    name: str
-    every: int = 0
-
-
-@app.post("/api/process_local")
-def api_process_local(body: LocalIn):
-    """Analyze a clip already in data/videos (picked from /api/samples)."""
-    path = (config.VIDEO_DIR / os.path.basename(body.name)).resolve()
-    if not path.exists() or path.suffix.lower() != ".mp4":
-        raise HTTPException(status_code=404, detail="sample not found")
-    job_id = uuid.uuid4().hex[:8]
-    JOBS[job_id] = {"status": "queued", "progress": 0}
-    threading.Thread(target=_run_job, args=(job_id, str(path), body.every),
-                     daemon=True).start()
-    return {"job_id": job_id}
 
 
 # ----------------------------------------------------------- alerts + challans
@@ -182,6 +152,17 @@ def api_frame(name: str):
     return Response(content=buf.tobytes(), media_type="image/jpeg")
 
 
+@app.get("/api/live/frame")
+def api_live_frame():
+    """Latest RAW (un-annotated) frame of the running live stream — lets the
+    calibration tool work on the live camera, not just sample clips."""
+    jpg = live_mod.LIVE.raw_jpg()
+    if jpg is None:
+        raise HTTPException(status_code=404,
+                            detail="live stream not running / no frame yet")
+    return Response(content=jpg, media_type="image/jpeg")
+
+
 @app.get("/api/calibration")
 def api_calibration_list():
     import json as _json
@@ -193,22 +174,42 @@ def api_calibration_list():
 
 @app.post("/api/calibration")
 def api_calibration_save(body: CalibIn):
-    """Save per-clip calibration: a 4-point road quad + real-world size
+    """Save per-source calibration: a 4-point road quad + real-world size
     (enables speed + over-speeding) and/or an allowed travel direction
-    (enables wrong-way). Applies the next time that clip is analyzed."""
+    (enables wrong-way).
+
+    video = a sample-clip basename, or the literal "live" to calibrate the
+    CURRENTLY RUNNING live stream — stored under its WxH resolution key (so
+    the same camera picks it up next session too) and hot-applied to the
+    running session immediately, no restart needed."""
     has_quad = len(body.points) == 4 and len(body.target_m) == 2
     has_dir = len(body.direction) == 2 and any(body.direction)
     if not (has_quad or has_dir):
         raise HTTPException(status_code=400,
                             detail="need 4 points + [w, l] metres and/or a direction")
+
+    points = ([[float(x), float(y)] for x, y in body.points]
+              if has_quad else None)
+    target = ([float(body.target_m[0]), float(body.target_m[1])]
+              if has_quad else None)
+    direction = ([float(body.direction[0]), float(body.direction[1])]
+                 if has_dir else None)
+
+    if body.video.strip().lower() == "live":
+        if not (live_mod.LIVE.running and live_mod.LIVE.frame_w):
+            raise HTTPException(status_code=409,
+                                detail="live stream is not running")
+        key = f"{live_mod.LIVE.frame_w}x{live_mod.LIVE.frame_h}"
+    else:
+        key = os.path.basename(body.video)
+
     from pipeline import save_calibration
-    save_calibration(
-        os.path.basename(body.video),
-        [[float(x), float(y)] for x, y in body.points] if has_quad else None,
-        [float(body.target_m[0]), float(body.target_m[1])] if has_quad else None,
-        direction=[float(body.direction[0]), float(body.direction[1])]
-        if has_dir else None)
-    return {"ok": True, "video": os.path.basename(body.video)}
+    save_calibration(key, points, target, direction=direction)
+
+    applied = False
+    if body.video.strip().lower() == "live":
+        applied = live_mod.LIVE.apply_calibration(points, target, direction)
+    return {"ok": True, "video": key, "applied": applied}
 
 
 @app.get("/api/violations/{vid}")
@@ -218,136 +219,6 @@ def api_violation(vid: int):
             r["snapshot_url"] = f"/media/{r['snapshot']}" if r.get("snapshot") else None
             return r
     raise HTTPException(status_code=404, detail="not found")
-
-
-def _run_job(job_id: str, path: str, every: int = 0):
-    try:
-        JOBS[job_id].update(status="processing")
-        from pipeline import process_video  # heavy import, deferred
-
-        def cb(cur, total):
-            JOBS[job_id].update(
-                progress=round(cur / total * 100, 1) if total else 0,
-                current=cur, total=total)
-
-        summary = process_video(path, progress_cb=cb, every=every or None)
-        JOBS[job_id].update(status="done", progress=100, summary=summary)
-    except Exception as e:  # surface the error to the UI instead of dying silently
-        JOBS[job_id].update(status="error", error=str(e))
-
-
-@app.post("/api/process")
-async def api_process(file: UploadFile = File(...), every: int = Form(0)):
-    dest = config.VIDEO_DIR / (file.filename or "upload.mp4")
-    with open(dest, "wb") as f:
-        shutil.copyfileobj(file.file, f)
-    job_id = uuid.uuid4().hex[:8]
-    JOBS[job_id] = {"status": "queued", "progress": 0}
-    threading.Thread(target=_run_job, args=(job_id, str(dest), every),
-                     daemon=True).start()
-    return {"job_id": job_id}
-
-
-@app.get("/api/process/{job_id}")
-def api_job(job_id: str):
-    return JOBS.get(job_id, {"status": "unknown"})
-
-
-@app.post("/api/seed")
-def api_seed():
-    """Reset the DB to a rich set of realistic demo violations."""
-    import seed_demo
-    n = seed_demo.seed()
-    return {"ok": True, "violations": n}
-
-
-# --------------------------------------------------------------------- URL / YouTube
-def _download_url(url: str) -> str:
-    import yt_dlp
-
-    for f in glob.glob(str(config.VIDEO_DIR / "stream.*")):
-        try:
-            os.remove(f)
-        except OSError:
-            pass
-    # NOTE: YouTube only offers ~360p as a single progressive MP4 — useless
-    # for plate reading. Prefer the video-only DASH stream up to 1080p (no
-    # audio merge needed, so ffmpeg is optional but wired up just in case).
-    opts = {
-        "format": ("bestvideo[ext=mp4][height<=1080]/bestvideo[height<=1080]"
-                   "/best[ext=mp4]/best"),
-        "outtmpl": str(config.VIDEO_DIR / "stream.%(ext)s"),
-        "quiet": True, "no_warnings": True, "noplaylist": True,
-    }
-    try:
-        import imageio_ffmpeg
-        opts["ffmpeg_location"] = imageio_ffmpeg.get_ffmpeg_exe()
-    except Exception:
-        pass
-    with yt_dlp.YoutubeDL(opts) as ydl:
-        ydl.download([url])
-    files = glob.glob(str(config.VIDEO_DIR / "stream.*"))
-    if not files:
-        raise RuntimeError("download produced no file")
-    return files[0]
-
-
-def _run_url_job(job_id: str, url: str, every: int = 0):
-    try:
-        JOBS[job_id].update(status="downloading")
-        path = _download_url(url)
-        JOBS[job_id].update(status="processing")
-        from pipeline import process_video
-
-        def cb(cur, total):
-            JOBS[job_id].update(
-                progress=round(cur / total * 100, 1) if total else 0,
-                current=cur, total=total)
-
-        summary = process_video(path, progress_cb=cb, every=every or None)
-        JOBS[job_id].update(status="done", progress=100, summary=summary)
-    except Exception as e:
-        JOBS[job_id].update(status="error", error=str(e))
-
-
-@app.post("/api/process_url")
-def api_process_url(body: UrlIn):
-    job_id = uuid.uuid4().hex[:8]
-    JOBS[job_id] = {"status": "queued", "progress": 0}
-    threading.Thread(target=_run_url_job, args=(job_id, body.url, body.every),
-                     daemon=True).start()
-    return {"job_id": job_id}
-
-
-# -------------------------------------------------------- live analysis preview
-@app.get("/api/preview.mjpg")
-def api_preview_mjpg():
-    """MJPEG stream of annotated frames WHILE a video is being analyzed —
-    the dashboard shows the AI working live instead of waiting for the file."""
-    import pipeline
-
-    def _job_running():
-        return any(j.get("status") in ("queued", "downloading", "processing")
-                   for j in JOBS.values())
-
-    def gen():
-        import time as _t
-        # wait through upload/download/model-load — up to 3 minutes as long
-        # as a job is actually alive
-        deadline = _t.time() + 180
-        while not pipeline.preview_active() and _t.time() < deadline:
-            if not _job_running():
-                deadline = min(deadline, _t.time() + 5)
-            _t.sleep(0.15)
-        while pipeline.preview_active():
-            jpg = pipeline.preview_jpg()
-            if jpg:
-                yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n"
-                       + jpg + b"\r\n")
-            _t.sleep(0.08)
-
-    return StreamingResponse(
-        gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
 
 class LocationIn(BaseModel):
@@ -370,7 +241,7 @@ def api_set_location(body: LocationIn):
 # --------------------------------------------------------------------- Live camera
 @app.post("/api/live/start")
 def api_live_start(body: LiveIn):
-    started = live_mod.LIVE.start(body.source or "0")
+    started = live_mod.LIVE.start(body.source or "0", every=body.every)
     return {"started": started, **live_mod.LIVE.state_dict()}
 
 

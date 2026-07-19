@@ -23,6 +23,7 @@ import statistics
 from collections import defaultdict, deque
 
 import config
+import speed
 
 
 def centroid(box):
@@ -42,9 +43,12 @@ class ViolationEngine:
         self.allowed_dir = allowed_direction
         # Image -> road-metres transform for accurate speed (returns metres
         # along the road, or None if the point is outside the calibrated zone).
-        # When None, speed falls back to the rough pixel method.
+        # When None, speed stays off (honest: no metric ground truth).
         self.transform_fn = transform_fn
-        self.speed_win = max(int(self.fps), 2)   # ~1 second of samples
+        # Real-world speed estimation (perspective transform + multi-frame
+        # regression + outlier rejection + EMA smoothing + confidence gate)
+        # lives in its own module, fed the tracking output frame by frame.
+        self.speed_est = speed.SpeedEstimator(self.fps, transform_fn)
         self._fidx = 0                           # latest frame index seen
         # track_id -> rolling history + which violations already fired.
         # "move" holds (frame_idx, virtual_x, virtual_y): a camera-motion-
@@ -53,10 +57,12 @@ class ViolationEngine:
         # instead of accumulating, and frame-skipped runs behave identically.
         self.tracks = defaultdict(
             lambda: {"cent": deque(maxlen=40),
-                     "ty": deque(maxlen=self.speed_win),
                      "move": deque(maxlen=90),
+                     "aspect": deque(maxlen=40),   # box height/width history
                      "vx": 0.0, "vy": 0.0,
-                     "nh_hits": 0, "triple_hits": 0,
+                     "nh_hits": 0, "triple_hits": 0, "sb_hits": 0,
+                     "wheelie_hits": 0, "phone_hits": 0,
+                     "drive_start": None, "stop_start": None,
                      "emitted": set(), "cls": None})
         self.events = []
         # Signal-state memory — honest detection, never invented when absent.
@@ -64,6 +70,13 @@ class ViolationEngine:
         self._last_signal_frame = -10 ** 9
         self._red_streak = 0
         self.signal_known = False
+
+    def set_transform_fn(self, fn):
+        """Hot-apply a new perspective transform (the live calibration tool
+        calibrates speed mid-session). Keeps the engine and its speed
+        estimator in sync so over-speed + on-screen speed activate together."""
+        self.transform_fn = fn
+        self.speed_est.set_transform_fn(fn)
 
     # ------------------------------------------------------------------ signal
     def signal_state(self, frame_idx, detected=None):
@@ -151,12 +164,42 @@ class ViolationEngine:
         net = math.hypot(win[-1][1] - win[0][1], win[-1][2] - win[0][2])
         return net >= max(12.0, config.MIN_MOVE_FRAC * self.h)
 
+    # ------------------------------------------------------------ rest-break
+    def _continuous_drive_seconds(self, tid, frame_idx):
+        """Update rest-break bookkeeping for this track and return seconds of
+        UNBROKEN continuous driving so far (0 while stopped / never started).
+        A stop shorter than BREAK_MIN_STOP_SECONDS (a red light, a jam) does
+        NOT reset the clock — only a genuine break does."""
+        st = self.tracks[tid]
+        if self.is_moving(tid):
+            st["stop_start"] = None
+            if st["drive_start"] is None:
+                st["drive_start"] = frame_idx
+            return (frame_idx - st["drive_start"]) / self.fps
+        if st["drive_start"] is not None:
+            if st["stop_start"] is None:
+                st["stop_start"] = frame_idx
+            elif (frame_idx - st["stop_start"]) / self.fps >= config.BREAK_MIN_STOP_SECONDS:
+                st["drive_start"] = None
+                st["stop_start"] = None
+                st["emitted"].discard("break")   # a real break re-arms the rule
+        return 0.0
+
     # ------------------------------------------------------------------ update
-    def update(self, frame_idx, vehicles, signal, riders):
+    def update(self, frame_idx, vehicles, signal, riders, belts=None,
+               phones=None, frame_time=None):
         """Advance one frame.
+
+        frame_time: real observation time in SECONDS (wall-clock) for accurate
+        speed on a live camera; None -> derived from frame_idx/fps (exact for
+        video files).
 
         vehicles: list of {track_id, cls, conf, box}
         riders:   list of {track_id, box, no_helmet, helmet_ok, riders: int}
+        belts:    list of {track_id, box, no_seatbelt, seatbelt_ok} (cars/
+                  buses/trucks only; empty/None when no seatbelt model)
+        phones:   list of {track_id, box, phone: bool} — a rider/driver with a
+                  phone in hand this frame (empty/None when none detected)
         Returns the list of NEW violation events created this frame.
         """
         ts = datetime.datetime.now().isoformat(timespec="seconds")
@@ -175,13 +218,12 @@ class ViolationEngine:
             st["cent"].append((frame_idx, cx, cy))
             conf_ok = v.get("conf", 1.0) >= config.CONF["vehicle"]
 
-            # transformed bottom-centre (metres along road) for accurate speed
-            if self.transform_fn is not None:
-                ax = (v["box"][0] + v["box"][2]) / 2.0
-                ay = v["box"][3]
-                ty = self.transform_fn((ax, ay))
-                if ty is not None:
-                    st["ty"].append((frame_idx, ty))
+            # feed the speed estimator this track's bottom-centre point EVERY
+            # frame — accurate (road-metres) when calibrated, approximate
+            # (pixel-based) otherwise. The estimator handles both internally.
+            ax = (v["box"][0] + v["box"][2]) / 2.0
+            ay = v["box"][3]
+            self.speed_est.update(tid, (ax, ay), frame_idx, frame_time)
 
             # --- Red-light: centroid crosses the stop line downward while RED
             # (signal read RED repeatedly + the vehicle is genuinely moving)
@@ -194,10 +236,14 @@ class ViolationEngine:
                     new.append(self._event("Red Light Jump", tid, v["box"],
                                            frame_idx, ts))
 
-            # --- Over-speeding (only when the camera is speed-calibrated)
+            # --- Over-speeding (only when the camera is speed-calibrated, the
+            # vehicle is genuinely MOVING, and the estimator is CONFIDENT —
+            # enough frames of consistent motion. The motion gate guarantees a
+            # stopped / jittering vehicle can never be issued a speeding fine.)
             if (config.ENABLE["over_speed"] and self.transform_fn is not None
-                    and conf_ok and "speed" not in st["emitted"]):
-                spd = self._speed_kmph(st)
+                    and conf_ok and "speed" not in st["emitted"]
+                    and self.is_moving(tid) and self.speed_est.confident(tid)):
+                spd = self.speed_est.speed(tid)
                 if spd and spd > config.SPEED_LIMIT_KMPH:
                     st["emitted"].add("speed")
                     ev = self._event("Over Speeding", tid, v["box"], frame_idx, ts)
@@ -211,6 +257,16 @@ class ViolationEngine:
                     and len(st["cent"]) >= 6 and self._wrong_way(st["cent"])):
                 st["emitted"].add("wrong")
                 new.append(self._event("Wrong Way", tid, v["box"], frame_idx, ts))
+
+            # --- Continuous driving / no rest break (fatigue rule)
+            if config.ENABLE["no_rest_break"]:
+                drive_secs = self._continuous_drive_seconds(tid, frame_idx)
+                if (drive_secs >= config.MAX_CONTINUOUS_DRIVE_SECONDS
+                        and conf_ok and "break" not in st["emitted"]):
+                    st["emitted"].add("break")
+                    ev = self._event("No Rest Break", tid, v["box"], frame_idx, ts)
+                    ev["drive_seconds"] = round(drive_secs, 1)
+                    new.append(ev)
 
         # --- Helmet + triple-riding (from rider associations).
         # Requires: a tracked, MOVING motorcycle with at least one associated
@@ -243,43 +299,81 @@ class ViolationEngine:
                     new.append(self._event("Triple Riding", tid, r["box"],
                                            frame_idx, ts))
 
+            # --- Wheelie / stunt riding. A wheelie makes the bike's box SPIKE
+            # taller than that same bike's own baseline aspect (height/width).
+            # A relative spike (not an absolute value) is what separates a
+            # wheelie from a merely tall rear-view rider. Motion + a baseline
+            # history + persistence are all required, so it can't misfire on
+            # one odd frame or a normal upright bike.
+            if config.ENABLE["wheelie"] and "wheelie" not in st["emitted"]:
+                x1, y1, x2, y2 = r["box"]
+                asp = (y2 - y1) / max(1.0, x2 - x1)
+                st["aspect"].append(asp)
+                if len(st["aspect"]) >= config.WHEELIE_MIN_HISTORY:
+                    base = statistics.median(list(st["aspect"])[:-3])
+                    if asp >= max(config.WHEELIE_MIN_ASPECT,
+                                  base * config.WHEELIE_RISE_RATIO):
+                        st["wheelie_hits"] += 1
+                    else:
+                        st["wheelie_hits"] = max(0, st["wheelie_hits"] - 1)
+                    if st["wheelie_hits"] >= config.WHEELIE_MIN_HITS:
+                        st["emitted"].add("wheelie")
+                        new.append(self._event("Wheelie Stunt", tid, r["box"],
+                                               frame_idx, ts))
+
+        # --- Seatbelt (cars/buses/trucks only, requires the optional
+        # seatbelt model — see build_seatbelt_status). Same rules as helmet:
+        # positive detection required, multi-frame persistence, must be moving.
+        for b in (belts or []):
+            tid = b.get("track_id")
+            if tid is None or not self.is_moving(tid):
+                continue
+            st = self.tracks[tid]
+            if config.ENABLE["no_seatbelt"] and "seatbelt" not in st["emitted"]:
+                if b.get("no_seatbelt"):
+                    st["sb_hits"] += 1
+                elif b.get("seatbelt_ok"):
+                    st["sb_hits"] = 0
+                if st["sb_hits"] >= config.SEATBELT_MIN_HITS:
+                    st["emitted"].add("seatbelt")
+                    new.append(self._event("No Seatbelt", tid, b["box"],
+                                           frame_idx, ts))
+
+        # --- Mobile phone use (rider/driver holding a phone while the vehicle
+        # is moving). The phone comes from the default model's COCO 'cell
+        # phone' class, associated to the vehicle in build_phone_status. Same
+        # discipline: positive detection, motion gate, multi-frame persistence.
+        for p in (phones or []):
+            tid = p.get("track_id")
+            if tid is None or not self.is_moving(tid):
+                continue
+            st = self.tracks[tid]
+            if config.ENABLE["phone_use"] and "phone" not in st["emitted"]:
+                if p.get("phone"):
+                    st["phone_hits"] += 1
+                else:
+                    st["phone_hits"] = max(0, st["phone_hits"] - 1)
+                if st["phone_hits"] >= config.PHONE_MIN_HITS:
+                    st["emitted"].add("phone")
+                    new.append(self._event("Mobile Phone Use", tid, p["box"],
+                                           frame_idx, ts))
+
         self.events.extend(new)
         return new
 
     # ----------------------------------------------------------------- helpers
-    def _speed_kmph(self, st):
-        # Accurate path: metres travelled along the road per second.
-        if self.transform_fn is not None:
-            ty = st["ty"]
-            if len(ty) < max(2, self.speed_win // 2):
-                return 0.0
-            f0, y0 = ty[0]
-            f1, y1 = ty[-1]
-            seconds = (f1 - f0) / self.fps
-            if seconds <= 0:
-                return 0.0
-            return abs(y1 - y0) / seconds * 3.6
-
-        # Fallback: rough pixel method (needs PIXELS_PER_METER calibration).
-        cent = st["cent"]
-        if len(cent) < 5:
-            return 0.0
-        f0, x0, y0 = cent[0]
-        f1, x1, y1 = cent[-1]
-        seconds = (f1 - f0) / self.fps
-        if seconds <= 0:
-            return 0.0
-        dist_px = math.hypot(x1 - x0, y1 - y0)
-        return (dist_px / config.PIXELS_PER_METER) / seconds * 3.6
-
     def speed_of(self, tid):
-        """Current speed (km/h) for on-screen labels — only when speed-calibrated."""
-        if self.transform_fn is None:
+        """Current smoothed speed (km/h) for on-screen labels + the dashboard,
+        for every genuinely MOVING vehicle. Accurate when the camera is
+        calibrated, otherwise an APPROXIMATE pixel estimate (shown as ~approx).
+
+        A vehicle must pass the MOTION GATE first — camera-compensated net
+        displacement over ~1s — so a PARKED bike whose tracker box jitters can
+        never show a phantom 5-10 km/h. Returns None when not moving / too new.
+        Speeding FINES use speed_est.confident() (calibrated-only) — never this."""
+        if not self.is_moving(tid):
             return None
-        st = self.tracks.get(tid)
-        if not st:
-            return None
-        s = self._speed_kmph(st)
+        s = self.speed_est.speed(tid)
         return int(round(s)) if s and s > 1 else None
 
     def _wrong_way(self, cent):
@@ -303,4 +397,5 @@ class ViolationEngine:
             "timestamp": ts,
             "fine": config.FINES.get(vtype, 1000),
             "speed_kmph": None,
+            "drive_seconds": None,
         }
