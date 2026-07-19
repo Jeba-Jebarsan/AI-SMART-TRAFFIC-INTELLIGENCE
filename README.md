@@ -2,6 +2,17 @@
   <img src="docs/banner.svg" alt="AI Smart Traffic Intelligence Platform" width="100%"/>
 </p>
 
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.10+-3776AB?logo=python&logoColor=white" alt="Python"/>
+  <img src="https://img.shields.io/badge/FastAPI-API-009688?logo=fastapi&logoColor=white" alt="FastAPI"/>
+  <img src="https://img.shields.io/badge/YOLOv8-Ultralytics-00BFFF?logo=pytorch&logoColor=white" alt="YOLOv8"/>
+  <img src="https://img.shields.io/badge/ByteTrack-Tracking-6c5ce7" alt="ByteTrack"/>
+  <img src="https://img.shields.io/badge/OpenCV-Vision-5C3EE8?logo=opencv&logoColor=white" alt="OpenCV"/>
+  <img src="https://img.shields.io/badge/ANPR-EasyOCR-ff7675" alt="EasyOCR"/>
+  <img src="https://img.shields.io/badge/tests-61%20passing-2ecc71" alt="Tests"/>
+  <img src="https://img.shields.io/badge/license-MIT-blue" alt="License"/>
+</p>
+
 # 🚦 Smart Traffic Violation System 🇱🇰
 
 AI that turns a **live camera feed** into **actionable enforcement**: it
