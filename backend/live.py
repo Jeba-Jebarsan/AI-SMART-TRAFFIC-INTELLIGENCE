@@ -136,6 +136,14 @@ class LiveProcessor:
             fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
             W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)) or 1280
             H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)) or 720
+            src_w, src_h = W, H
+            # Downscale oversized sources (4K drones/CCTV) before ANY analysis.
+            # Everything downstream — boxes, snapshots, calibration, the
+            # dashboard — then works in one consistent coordinate space.
+            scale = 1.0
+            if W > config.LIVE_MAX_W:
+                scale = config.LIVE_MAX_W / float(W)
+                W, H = int(round(W * scale)), int(round(H * scale))
             self.frame_w, self.frame_h = W, H
 
             # Live gets its OWN model instance so its ByteTrack state never
@@ -144,8 +152,13 @@ class LiveProcessor:
             _, helmet_model = pipeline.load()
             seatbelt_model = pipeline.load_seatbelt()
             device = resolve_device()
+            # Look calibration up at the source's NATIVE resolution (that's the
+            # space its quad was drawn in), then scale the quad to match the
+            # downscaled frames we actually analyse.
             cal_pts, cal_target, cal_dir = pipeline.load_calibration(
-                self.source if self.is_file else None, W, H)
+                self.source if self.is_file else None, src_w, src_h)
+            if cal_pts and scale != 1.0:
+                cal_pts = [[x * scale, y * scale] for x, y in cal_pts]
             engine = ViolationEngine(
                 W, H, fps,
                 transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
@@ -168,7 +181,8 @@ class LiveProcessor:
             db.set_meta("video_fps", round(float(fps), 2))
             db.set_meta("device", "GPU" if device != "cpu" else "CPU")
             db.set_meta("speed_calibrated", bool(cal_pts))
-            state = pipeline.new_run_state(fps, seq_base=0, frame_w=W)
+            state = pipeline.new_run_state(fps, seq_base=0, frame_w=W,
+                                           every=self.every)
             state["speed_quad"] = cal_pts
             self._state = state
             from location import resolve_location
@@ -186,6 +200,8 @@ class LiveProcessor:
             # looks frozen/broken for that whole time.
             ok0, f0 = cap.read()
             if ok0:
+                if scale != 1.0:
+                    f0 = cv2.resize(f0, (W, H), interpolation=cv2.INTER_AREA)
                 with self._lock:
                     self._last_raw = f0
                 warm = f0.copy()
@@ -203,31 +219,60 @@ class LiveProcessor:
             except Exception:
                 pass
 
+            play_t0 = time.monotonic()
+            dropped = 0
+            paced = bool(self.is_file and fps > 0)
             while self.running:
+                # --- real-time pacing for FILE replay ---------------------
+                # Detection on CPU is far slower than playback (a 4K clip
+                # analyses at ~1 fps against 25 fps of video). Without pacing
+                # the clip crawls and the dashboard looks frozen or broken.
+                # A live camera solves this by simply dropping the frames it
+                # was too busy to look at, so a replayed file does the same:
+                # the video always runs at its true speed and we analyse
+                # whichever frame is current when the AI is ready.
+                if paced:
+                    now = time.monotonic()
+                    due = play_t0 + fidx / fps
+                    if now < due:
+                        time.sleep(min(0.2, due - now))     # ahead: wait
+                    else:
+                        behind = int((now - play_t0) * fps) - fidx
+                        for _ in range(max(0, behind)):     # behind: skip
+                            if not cap.grab():              # grab = no decode
+                                break
+                            fidx += 1
+                            dropped += 1
+
                 ok, frame = cap.read()
                 if not ok:
                     # File sources play ONCE — looping would re-count every
                     # vehicle and re-issue every violation on each pass.
                     break
+                if scale != 1.0:
+                    frame = cv2.resize(frame, (W, H), interpolation=cv2.INTER_AREA)
+                cur = fidx
+                fidx += 1
                 with self._lock:
                     self._last_raw = frame
 
-                # Frame-skip speed mode (same lever as batch analysis): on
-                # heavy footage, processing every single frame on CPU can
-                # never keep up with "live" — skipping frames is what makes
-                # this feel live instead of stuck.
-                if fidx % self.every == 0:
+                # When pacing is on, dropping already throttles the analysis
+                # rate, so every decoded frame is worth analysing. Otherwise
+                # (live camera) the frame-skip selector does the throttling.
+                if paced or cur % self.every == 0:
                     # A live CAMERA delivers frames at a real (fluctuating) rate,
                     # so measure speed against the wall clock. A FILE replay has
-                    # exact per-frame timing, so let it use frame_idx/fps (None).
+                    # exact per-frame timing, so let it use frame_idx/fps (None)
+                    # — still exact here, because dropped frames don't change
+                    # what frame number the analysed frame actually is.
                     ftime = None if self.is_file else (time.monotonic() - t0)
                     annotated = pipeline.process_frame(
-                        model, engine, frame, fidx, device, helmet_model,
+                        model, engine, frame, cur, device, helmet_model,
                         state, seatbelt_model, ftime)
                     self._publish(annotated)
 
-                fidx += 1
                 self.stats = {"frames": fidx,
+                              "dropped": dropped,
                               "vehicles": len(state["vehicle_ids"]),
                               "violations": len(engine.events)}
                 if fidx % 15 == 0:

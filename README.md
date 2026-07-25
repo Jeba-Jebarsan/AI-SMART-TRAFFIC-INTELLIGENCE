@@ -94,9 +94,26 @@ If your phone/camera app can expose an RTSP or MJPEG URL directly (e.g.
 Android's "IP Webcam" app), skip the relay entirely and paste that URL
 straight into the camera-source box — it's a pull source already.
 
-Once connected, pick a **speed mode** (🐢/⚡/🚀) so a slower laptop can still
-keep up in real time — it analyzes every 1st/2nd/3rd frame instead of falling
-behind.
+Once connected, pick a **speed mode** (🐢/⚡/🚀). On a CPU laptop the detector
+is slower than playback, so the feed **drops frames it was too busy to analyse**
+— exactly as a real camera does — and always plays at true speed instead of
+crawling in slow motion. The speed mode sets the inference resolution
+(960/640/480 px), which decides how many of those frames get analysed.
+
+---
+
+## 🧪 Will my clip actually demo well?
+
+The system only reports what it can genuinely prove, so footage with no moving
+traffic legitimately produces **no violations**. Vet a clip before you rely on
+it:
+
+```powershell
+python scripts/check_clip.py data/videos/mine.mp4
+```
+
+It runs the real pipeline and prints what fired, what's blocked and how to
+unblock it — e.g. *"Over Speeding OFF — no speed calibration for this clip"*.
 
 ---
 

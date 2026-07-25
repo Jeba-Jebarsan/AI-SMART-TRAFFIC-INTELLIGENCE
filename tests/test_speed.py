@@ -132,13 +132,15 @@ check("outlier: no false Over Speeding fine from the spike",
 # --- 5: wall-clock timestamps override frame_idx/fps (live-camera accuracy).
 # Same pixel motion, but we tell the engine only HALF the time elapsed per frame
 # (camera actually running ~2x the assumed fps) -> measured speed must ~double.
+# 60 frames, not 40: at half-speed wall-clock the run must still exceed
+# config.SPEED_MIN_SECONDS of observed time for the estimate to be trusted.
 eng_ts = new_engine()
-for f in range(40):
+for f in range(60):
     y2 = 300 + f * 8.1
     t = (f / FPS) / 2.0                       # real elapsed = half of frame/fps
     eng_ts.update(f, [car(20, 500, y2)], "UNKNOWN", [], [], None, t)
 eng_base = new_engine()
-for f in range(40):
+for f in range(60):
     eng_base.update(f, [car(21, 500, 300 + f * 8.1)], "UNKNOWN", [])
 check("wall-clock timestamp is used (half the time -> ~2x the speed)",
       eng_ts.speed_of(20) is not None and eng_base.speed_of(21) is not None

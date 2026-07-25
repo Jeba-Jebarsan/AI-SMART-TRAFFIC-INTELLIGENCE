@@ -28,8 +28,23 @@ for _d in (DATA_DIR, VIDEO_DIR, OUTPUT_DIR, SNAPSHOT_DIR, MODELS_DIR):
 # ----------------------------------------------------------------------------
 # Models
 # ----------------------------------------------------------------------------
-# yolov8n auto-downloads on first use. Swap to yolov8s/m for higher accuracy.
-VEHICLE_MODEL = str(MODELS_DIR / "yolov8n.pt")
+# Vehicle/person detector. Prefers the strongest model actually present.
+#
+# WHY yolov8s IS THE DEFAULT: on real 640x360 Sri Lankan traffic footage,
+# yolov8n detected only 64 motorcycles and could associate a RIDER with just 12
+# of them — the rider simply wasn't detected as a person, so helmet / triple-
+# riding / phone analysis was skipped for ~81% of bikes. yolov8s found 108
+# motorcycles and 41 rider associations on the identical clip. Rider recall is
+# the bottleneck for most violations, so the bigger model is worth its cost.
+# yolov8n stays as an automatic fallback for low-end machines.
+def _pick_vehicle_model():
+    for _name in ("yolov8s.pt", "yolov8n.pt"):
+        if (MODELS_DIR / _name).exists():
+            return str(MODELS_DIR / _name)
+    return str(MODELS_DIR / "yolov8s.pt")   # auto-downloads on first use
+
+
+VEHICLE_MODEL = _pick_vehicle_model()
 
 # OPTIONAL drop-in helmet model. If a file exists here it is used for real
 # helmet detection (classes should include 'helmet' / 'no-helmet' / 'head').
@@ -125,6 +140,14 @@ ANPR_TRIES = 10          # max OCR attempts per track (detector runs are free)
 # Snapshots stay full resolution for evidence; the dashboard player doesn't
 # need 4K and the H.264 encode is ~4x faster this way.
 OUTPUT_MAX_W = 1920
+
+# Live/replay frames wider than this are downscaled BEFORE analysis. A 4K
+# drone or CCTV feed costs ~4x the decode and inference time of 1080p for
+# almost no detection benefit (the detector runs at IMGSZ anyway), and on a
+# CPU laptop that is the difference between analysing 5% and 25% of the
+# frames. Speed calibration quads are scaled by the same factor, so metric
+# speed is unaffected. Raise it if you need maximum plate-OCR detail.
+LIVE_MAX_W = 1920
 
 # A plate is CONFIRMED (shown on video/dashboard, written to DB, used on
 # challans) only when reads agreeing on the same digit-tail were seen in at
@@ -272,8 +295,25 @@ SPEED_APPROX = False
 SPEED_EMA_ALPHA = 0.4        # weight on the newest reading when smoothing (0..1)
 SPEED_MIN_R2 = 0.55          # min linearity (R^2) of motion required to TRUST a speed
 SPEED_OUTLIER_SIGMA = 2.0    # drop position samples > N*std off the fitted line
-SPEED_SANITY_MAX = 250.0     # readings above this km/h are rejected as tracker noise
-SPEED_MIN_SECONDS = 0.35     # a track must be watched this long before a speed is trusted
+# Readings above this km/h are rejected as tracker noise. No road vehicle on a
+# Sri Lankan road legitimately exceeds this, so a higher reading is always a
+# tracking artefact rather than a real (and enormous) speeding offence.
+SPEED_SANITY_MAX = 180.0
+# Max RMS distance (metres) the observed positions may sit off the fitted
+# straight line before the speed is distrusted. Far from the camera one pixel
+# of box jitter is worth several metres, so this — not R^2 — is what rejects
+# noisy far-field tracks.
+SPEED_MAX_RESIDUAL_M = 2.5
+# A track must be watched this long before its speed is trusted. Measured over
+# a third of a second the estimate is dominated by bounding-box jitter, which
+# is what produced a spurious 180 km/h first reading on a car actually doing
+# 144 — every track's opening estimate was too hot, then converged. One second
+# of observation removes the transient.
+SPEED_MIN_SECONDS = 1.0
+# Length of the trailing measurement window, in SECONDS (not frames) — live
+# replay drops frames, so the analysis rate varies and a frame-count window
+# would mean wildly different durations on different hardware.
+SPEED_WINDOW_SECONDS = 2.5
 
 # ----------------------------------------------------------------------------
 # Wrong-way detection

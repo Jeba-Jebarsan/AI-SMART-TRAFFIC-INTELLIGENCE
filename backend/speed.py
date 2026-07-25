@@ -66,8 +66,16 @@ class SpeedEstimator:
     def __init__(self, fps, transform_fn=None):
         self.fps = max(float(fps or 25.0), 1.0)
         self.transform_fn = transform_fn
-        self.win = max(6, int(self.fps * 1.4))          # ~1.4 s window
-        self.min_samples = max(5, int(self.fps * 0.4))
+        # Buffer enough observations to cover the time window at full frame
+        # rate; _recent() then trims by TIME, so a sparse analyser is fine.
+        self.win = max(12, int(self.fps * config.SPEED_WINDOW_SECONDS))
+        # A least-squares fit needs POINTS, not frames. Deriving this from fps
+        # (e.g. fps*0.4 = 10 at 25fps) is wrong whenever analysis is slower
+        # than playback: a CPU laptop analysing live 4K manages ~2 fps, so a
+        # highway vehicle is observed 5-6 times before it leaves frame and
+        # could never reach an fps-derived minimum — speed silently never
+        # became "confident" and over-speeding never fired.
+        self.min_samples = 5
         # calibrated mode stores (t, road_metres); approx mode stores (t, x, y)
         self._samples = defaultdict(lambda: deque(maxlen=self.win))
         self._ema = {}            # track_id -> EMA-smoothed km/h
@@ -108,10 +116,26 @@ class SpeedEstimator:
         else:
             buf.append((t, float(image_point[0]), float(image_point[1])))
 
+    def _recent(self, tid):
+        """Observations inside the trailing TIME window.
+
+        The window is defined in seconds rather than in frames because the
+        analysis rate is not the video rate — live replay drops whatever
+        frames the CPU was too busy to look at. Trimming by time keeps the
+        speed estimate local (a vehicle that accelerates isn't averaged
+        against where it was five seconds ago) at any sampling rate.
+        """
+        buf = self._samples.get(tid)
+        if not buf:
+            return []
+        t_end = buf[-1][0]
+        out = [s for s in buf if t_end - s[0] <= config.SPEED_WINDOW_SECONDS]
+        return out if len(out) >= 2 else list(buf)[-2:]
+
     # ------------------------------------------------------- accurate (metres)
     def _clean(self, tid):
         """Cleaned (t, metres) samples with gross outliers dropped (calibrated)."""
-        buf = list(self._samples.get(tid, ()))
+        buf = self._recent(tid)
         if len(buf) < 4:
             return buf
         fit = _fit(buf)
@@ -136,12 +160,35 @@ class SpeedEstimator:
         slope, r2, n = fit
         return abs(slope) * 3.6, r2, n
 
+    def _residual_m(self, tid):
+        """RMS distance (metres) of the observations from the fitted line.
+
+        R^2 alone is not enough to trust a speed: a track that is genuinely
+        moving has a large spread of positions, which keeps R^2 high even when
+        individual points are metres off the line. That matters most far from
+        the camera, where perspective makes one pixel of box jitter worth
+        several metres — the case that produced impossible readings (240+ km/h)
+        once live replay started sampling sparsely. Returns None if unavailable.
+        """
+        samples = self._clean(tid)
+        fit = _fit(samples)
+        if fit is None:
+            return None
+        slope = fit[0]
+        t0 = samples[0][0]
+        ts = [t - t0 for t, _ in samples]
+        ys = [y for _, y in samples]
+        mt = sum(ts) / len(ts)
+        my = sum(ys) / len(ys)
+        res = [(y - (my + slope * (t - mt))) ** 2 for t, y in zip(ts, ys)]
+        return math.sqrt(sum(res) / len(res))
+
     # ------------------------------------------------------- approx (pixels)
     def _raw_approx(self, tid):
         """(km/h, quality, n) from pixel displacement. `quality` is the ratio
         of net displacement to total path length — near 1.0 for a vehicle
         travelling in a straight line, near 0 for a box jittering in place."""
-        buf = list(self._samples.get(tid, ()))
+        buf = self._recent(tid)
         n = len(buf)
         if n < 3:
             return 0.0, 0.0, n
@@ -167,14 +214,17 @@ class SpeedEstimator:
         so over-speeding fines can never come from a rough estimate."""
         if self.approx:
             return False
-        buf = self._samples.get(tid)
+        buf = self._recent(tid)
         if not buf or len(buf) < self.min_samples:
             return False
         if (buf[-1][0] - buf[0][0]) < config.SPEED_MIN_SECONDS:
             return False
         kmph, r2, n = self._raw_kmph(tid)
-        return (n >= self.min_samples and r2 >= config.SPEED_MIN_R2
-                and 0.0 < kmph <= config.SPEED_SANITY_MAX)
+        if not (n >= self.min_samples and r2 >= config.SPEED_MIN_R2
+                and 0.0 < kmph <= config.SPEED_SANITY_MAX):
+            return False
+        rms = self._residual_m(tid)
+        return rms is None or rms <= config.SPEED_MAX_RESIDUAL_M
 
     def speed(self, tid):
         """EMA-smoothed km/h for display, in either mode (0.0 when unavailable
@@ -183,9 +233,16 @@ class SpeedEstimator:
         # a rough (and easily "random"-looking) pixel estimate
         if self.approx and not config.SPEED_APPROX:
             return 0.0
-        buf = self._samples.get(tid)
+        buf = self._recent(tid)
         if not buf or len(buf) < 3:
             return 0.0
+        # Calibrated mode only DISPLAYS a speed it would also stand behind for
+        # enforcement. Showing an unconfident fit is exactly how an impossible
+        # number reaches the screen, and one absurd reading in front of judges
+        # costs more than a missing one. Falls back to the last trusted value
+        # (the EMA is only ever written below, after this gate).
+        if not self.approx and not self.confident(tid):
+            return self._ema.get(tid, 0.0)
         kmph, quality, n = self._raw_kmph(tid)
         if kmph <= 0 or kmph > config.SPEED_SANITY_MAX:
             return self._ema.get(tid, 0.0)
