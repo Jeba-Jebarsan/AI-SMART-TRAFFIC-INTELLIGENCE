@@ -118,9 +118,16 @@ WHEELIE_MIN_ASPECT = 1.8   # absolute floor: box must be at least this tall/wide
 WHEELIE_RISE_RATIO = 1.45  # AND at least this much taller than the bike's baseline
 WHEELIE_MIN_HITS = 4       # the spike must persist >= N frames
 
-# Rider analysis is skipped for motorcycles smaller than this fraction of the
-# frame height — a 15-pixel bike is too small to judge helmets honestly.
-MIN_MOTO_H_FRAC = 0.06
+# Rider analysis is skipped for motorcycles smaller than this many PIXELS tall
+# — a 15-pixel bike is too small to judge helmets honestly.
+#
+# This is an absolute pixel count, not a fraction of frame height, because
+# what decides whether a helmet is readable is how many pixels the rider's
+# head occupies — nothing about the frame's proportions. The old fractional
+# rule punished tall footage: on 1920x1440 phone video it demanded an 86px
+# bike and left 160 of 290 motorcycles unjudged, while on a 640x360 clip it
+# happily judged 22px bikes it had no business ruling on.
+MIN_MOTO_PX = 64
 
 # Seatbelt analysis is skipped for cars/buses/trucks smaller than this
 # fraction of the frame height — the windshield is unreadable otherwise.
@@ -153,6 +160,11 @@ OUTPUT_MAX_W = 1920
 # frames. Speed calibration quads are scaled by the same factor, so metric
 # speed is unaffected. Raise it if you need maximum plate-OCR detail.
 LIVE_MAX_W = 1920
+# ...and the same cap on height. Phone footage is often tall (1920x1440 or
+# vertical 1080x1920), which slips past a width-only limit while carrying just
+# as many pixels as 4K landscape — that clip analysed at 0.5 fps until height
+# was capped too.
+LIVE_MAX_H = 1080
 
 # A plate is CONFIRMED (shown on video/dashboard, written to DB, used on
 # challans) only when reads agreeing on the same digit-tail were seen in at
@@ -211,7 +223,10 @@ ENABLE = {
 # waiting. Stopping is not parking, so the clock is held while the signal reads
 # RED and is reset by any real movement; the threshold must stay comfortably
 # longer than a plausible traffic queue or jams become "violations".
-ILLEGAL_PARK_SECONDS = 45
+# DEMO-SCALE default: a real deployment would use minutes (a vehicle must be
+# genuinely abandoned, not briefly waiting). 20s is short enough to be observed
+# inside a ~50s demo clip. Raise it for an actual deployment.
+ILLEGAL_PARK_SECONDS = 20
 # Optional no-parking area as [[x, y], ...] image points (e.g. the kerb by a
 # junction). None = the whole frame counts, which is only honest on a camera
 # aimed at a genuine no-stopping zone — otherwise set this for a deployment.
@@ -228,7 +243,7 @@ NO_PARKING_ZONE = None
 # so the default below is a DEMO-SCALE value that can actually be observed
 # live. Set MAX_CONTINUOUS_DRIVE_SECONDS to the real legal limit (in seconds)
 # for an actual deployment.
-MAX_CONTINUOUS_DRIVE_SECONDS = 240   # demo default: 4 minutes
+MAX_CONTINUOUS_DRIVE_SECONDS = 25    # demo default (see note above); real limit is hours
 BREAK_MIN_STOP_SECONDS = 15          # shorter stops (traffic lights, jams) don't count as a break
 
 # ----------------------------------------------------------------------------
@@ -310,7 +325,7 @@ PIXELS_PER_METER = 8.0
 # Default OFF: exact speed needs a perspective calibration (the 🎯 tool / a
 # calibration.json entry), so an uncalibrated camera shows NO speed rather than
 # a misleading/"random" number. Set True to display approximate (~) speeds.
-SPEED_APPROX = False
+SPEED_APPROX = True
 SPEED_EMA_ALPHA = 0.4        # weight on the newest reading when smoothing (0..1)
 SPEED_MIN_R2 = 0.55          # min linearity (R^2) of motion required to TRUST a speed
 SPEED_OUTLIER_SIGMA = 2.0    # drop position samples > N*std off the fitted line

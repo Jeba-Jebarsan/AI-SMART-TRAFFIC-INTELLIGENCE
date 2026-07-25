@@ -122,6 +122,32 @@ def save_calibration(key, points, target_m, direction=None):
                                        encoding="utf-8")
 
 
+def load_pixels_per_meter(video_path=None, frame_w=None, frame_h=None):
+    """Per-camera pixels-per-metre for APPROX (uncalibrated) speed, or None.
+
+    Read from the same calibration.json entry as the quad, via a
+    "pixels_per_meter" key. Approx speed is lens- and mounting-dependent, so
+    one global constant reads sensibly on a distant highway view and wildly
+    wrong on close roadside phone footage.
+    """
+    entries = {}
+    try:
+        entries = json.loads(config.CALIBRATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    keys = []
+    if video_path:
+        import os
+        keys.append(os.path.basename(str(video_path)))
+    if frame_w and frame_h:
+        keys.append(f"{int(frame_w)}x{int(frame_h)}")
+    for k in keys:
+        e = entries.get(k) or {}
+        if e.get("pixels_per_meter"):
+            return float(e["pixels_per_meter"])
+    return None
+
+
 def make_transform_fn(points=None, target_m=None):
     """Build an image->road-metres transform from a calibration quad.
 
@@ -208,7 +234,7 @@ def build_riders(frame, motos, persons, helmet_model):
 
         no_helmet = False
         helmet_ok = False
-        big_enough = (my2 - my1) >= config.MIN_MOTO_H_FRAC * H
+        big_enough = (my2 - my1) >= config.MIN_MOTO_PX
 
         if n >= 1 and big_enough and helmet_model is not None:
             # Real model on the motorcycle+rider crop (extends above the bike

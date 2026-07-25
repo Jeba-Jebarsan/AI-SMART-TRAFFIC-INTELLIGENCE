@@ -222,8 +222,9 @@ class LiveProcessor:
             # Everything downstream — boxes, snapshots, calibration, the
             # dashboard — then works in one consistent coordinate space.
             scale = 1.0
-            if W > config.LIVE_MAX_W:
-                scale = config.LIVE_MAX_W / float(W)
+            if W > config.LIVE_MAX_W or H > config.LIVE_MAX_H:
+                scale = min(config.LIVE_MAX_W / float(W),
+                            config.LIVE_MAX_H / float(H))
                 W, H = int(round(W * scale)), int(round(H * scale))
             self.frame_w, self.frame_h = W, H
 
@@ -240,10 +241,16 @@ class LiveProcessor:
                 self.source if self.is_file else None, src_w, src_h)
             if cal_pts and scale != 1.0:
                 cal_pts = [[x * scale, y * scale] for x, y in cal_pts]
+            # Approx-speed scale is per-camera; scale it with the frame too,
+            # since we may be analysing a downscaled copy.
+            ppm = pipeline.load_pixels_per_meter(
+                self.source if self.is_file else None, src_w, src_h)
+            if ppm and scale != 1.0:
+                ppm *= scale
             engine = ViolationEngine(
                 W, H, fps,
                 transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
-                allowed_direction=cal_dir)
+                allowed_direction=cal_dir, ppm=ppm)
             self._engine = engine
 
             db.init_db()

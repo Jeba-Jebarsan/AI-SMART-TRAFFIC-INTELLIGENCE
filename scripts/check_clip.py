@@ -54,17 +54,27 @@ def main():
     W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    src_w, src_h = W, H
+    # Mirror live mode's downscaling, or these numbers wouldn't describe what
+    # the dashboard will actually do with this clip.
+    scale = 1.0
+    if W > config.LIVE_MAX_W or H > config.LIVE_MAX_H:
+        scale = min(config.LIVE_MAX_W / float(W), config.LIVE_MAX_H / float(H))
+        W, H = int(round(W * scale)), int(round(H * scale))
 
     print("=" * 66)
     print(f"CLIP   {os.path.basename(path)}")
-    print(f"       {W}x{H} @ {fps:.0f} fps, {total} frames "
-          f"({total / max(fps, 1):.0f}s)")
+    print(f"       {src_w}x{src_h} @ {fps:.0f} fps, {total} frames "
+          f"({total / max(fps, 1):.0f}s)"
+          + (f"  -> analysed at {W}x{H}" if scale != 1.0 else ""))
 
     model = YOLO(config.VEHICLE_MODEL)
     _, helmet_model = pipeline.load()
     seatbelt_model = pipeline.load_seatbelt()
     device = resolve_device()
-    cal_pts, cal_target, cal_dir = pipeline.load_calibration(path, W, H)
+    cal_pts, cal_target, cal_dir = pipeline.load_calibration(path, src_w, src_h)
+    if cal_pts and scale != 1.0:
+        cal_pts = [[x * scale, y * scale] for x, y in cal_pts]
 
     print(f"MODEL  {os.path.basename(config.VEHICLE_MODEL)} on {device}")
     print(f"SETUP  speed calibration: {'YES' if cal_pts else 'NO'}   "
@@ -73,10 +83,13 @@ def main():
           f"seatbelt model: {'YES' if seatbelt_model else 'NO'}")
     print("=" * 66)
 
+    ppm = pipeline.load_pixels_per_meter(path, src_w, src_h)
+    if ppm and scale != 1.0:
+        ppm *= scale
     engine = ViolationEngine(
         W, H, fps,
         transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
-        allowed_direction=cal_dir)
+        allowed_direction=cal_dir, ppm=ppm)
     db.init_db()
     db.clear()
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)
@@ -94,6 +107,8 @@ def main():
         if not ok:
             break
         if fidx % args.every == 0:
+            if scale != 1.0:
+                frame = cv2.resize(frame, (W, H), interpolation=cv2.INTER_AREA)
             pipeline.process_frame(model, engine, frame, fidx, device,
                                    helmet_model, state, seatbelt_model)
             analysed += 1

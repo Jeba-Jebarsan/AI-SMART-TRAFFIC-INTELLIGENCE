@@ -105,8 +105,16 @@ def api_reset():
 
 @app.get("/api/samples")
 def api_samples():
-    """Bundled clips in data/videos — picked from the 🎬 Play Live selector."""
-    vids = sorted(config.VIDEO_DIR.glob("*.mp4"))
+    """Bundled clips in data/videos — picked from the 🎬 Play Live selector.
+
+    Phone footage arrives as .MOV/.mov (iPhone) or .mkv/.webm as often as .mp4,
+    so match any container OpenCV can open rather than mp4 alone — otherwise a
+    clip you dropped in simply never appears in the selector.
+    """
+    exts = {".mp4", ".mov", ".m4v", ".avi", ".mkv", ".webm"}
+    vids = sorted((p for p in config.VIDEO_DIR.iterdir()
+                   if p.is_file() and p.suffix.lower() in exts),
+                  key=lambda p: p.name.lower())
     return [v.name for v in vids if v.name != "annotated.mp4"]
 
 

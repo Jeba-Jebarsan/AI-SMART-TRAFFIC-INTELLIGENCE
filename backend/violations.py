@@ -33,7 +33,7 @@ def centroid(box):
 
 class ViolationEngine:
     def __init__(self, frame_w, frame_h, fps, transform_fn=None,
-                 allowed_direction=None):
+                 allowed_direction=None, ppm=None):
         self.w = frame_w
         self.h = frame_h
         self.fps = max(float(fps), 1.0)
@@ -48,7 +48,7 @@ class ViolationEngine:
         # Real-world speed estimation (perspective transform + multi-frame
         # regression + outlier rejection + EMA smoothing + confidence gate)
         # lives in its own module, fed the tracking output frame by frame.
-        self.speed_est = speed.SpeedEstimator(self.fps, transform_fn)
+        self.speed_est = speed.SpeedEstimator(self.fps, transform_fn, ppm=ppm)
         self._fidx = 0                           # latest frame index seen
         # track_id -> rolling history + which violations already fired.
         # "move" holds (frame_idx, virtual_x, virtual_y): a camera-motion-

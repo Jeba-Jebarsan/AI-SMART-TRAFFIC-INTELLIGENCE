@@ -63,9 +63,15 @@ class SpeedEstimator:
     fed into filtered km/h readings.
     """
 
-    def __init__(self, fps, transform_fn=None):
+    def __init__(self, fps, transform_fn=None, ppm=None):
         self.fps = max(float(fps or 25.0), 1.0)
         self.transform_fn = transform_fn
+        # Pixels per real-world metre, for the APPROX (uncalibrated) path.
+        # Per-camera, because it depends entirely on lens and mounting: the
+        # global default suits a distant highway view and reads ~3x too fast
+        # on close roadside phone footage. Set "pixels_per_meter" in a
+        # calibration.json entry to correct a specific camera.
+        self.ppm = float(ppm or config.PIXELS_PER_METER)
         # Buffer enough observations to cover the time window at full frame
         # rate; _recent() then trims by TIME, so a sparse analyser is fine.
         self.win = max(12, int(self.fps * config.SPEED_WINDOW_SECONDS))
@@ -201,7 +207,7 @@ class SpeedEstimator:
         path = sum(math.hypot(buf[i][1] - buf[i - 1][1], buf[i][2] - buf[i - 1][2])
                    for i in range(1, n))
         quality = (net / path) if path > 0 else 0.0
-        kmph = (net / config.PIXELS_PER_METER) / dt * 3.6
+        kmph = (net / self.ppm) / dt * 3.6
         return kmph, quality, n
 
     def _raw_kmph(self, tid):
