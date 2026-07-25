@@ -100,6 +100,15 @@ is slower than playback, so the feed **drops frames it was too busy to analyse**
 crawling in slow motion. The speed mode sets the inference resolution
 (960/640/480 px), which decides how many of those frames get analysed.
 
+**Live cameras run capture and analysis on separate threads.** A webcam
+produces ~30 fps while CPU detection manages ~2-3 fps, so a single thread would
+throttle the picture down to the detection rate. Instead a reader thread keeps
+the newest frame flowing to the browser (~7-8 fps published) and stamps the most
+recent detection overlay onto it, so **the video stays smooth while the boxes
+refresh as fast as the CPU allows**. Inference threads are capped at ~2/3 of
+your cores (`config.TORCH_THREADS`) so capture is never starved — saturating
+every core made both the video *and* the analysis slower.
+
 ---
 
 ## 🧪 Will my clip actually demo well?

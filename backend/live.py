@@ -38,6 +38,16 @@ class LiveProcessor:
         self._state = None            # live run state (for hot-apply)
         self._lock = threading.Lock()
         self.stats = {"frames": 0, "vehicles": 0, "violations": 0}
+        # --- live-camera capture/analysis decoupling -----------------------
+        # A camera produces ~30 fps; CPU detection manages ~2 fps. Reading and
+        # analysing in one thread therefore throttles capture to the analysis
+        # rate and the picture crawls. A reader thread keeps the newest frame
+        # here so display stays at camera rate while analysis runs behind it.
+        self._latest = None           # newest camera frame (reader thread)
+        self._latest_seq = 0          # bumped per captured frame
+        self._ov_img = None           # last ANNOTATED frame (overlay source)
+        self._ov_mask = None          # pixels the annotation painted
+        self._ov_lock = threading.Lock()
 
     # ------------------------------------------------------------------ control
     def start(self, source, every=None):
@@ -93,6 +103,64 @@ class LiveProcessor:
             engine.allowed_dir = tuple(direction)
         return True
 
+    def _set_overlay(self, raw, annotated):
+        """Remember what the annotator PAINTED onto this frame.
+
+        Detection runs far slower than the camera, so between analyses we
+        still want boxes, plate banners and speed chips on screen instead of
+        a bare picture that flickers annotations on and off. Rather than
+        rebuilding that artwork (which lives inside pipeline._draw), we diff
+        the annotated frame against the raw one it came from and keep the
+        painted pixels as a stencil to stamp onto later frames.
+        """
+        import cv2
+        if raw is None or annotated is None or raw.shape != annotated.shape:
+            return
+        diff = cv2.absdiff(annotated, raw)
+        gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+        _, mask = cv2.threshold(gray, 12, 255, cv2.THRESH_BINARY)
+        with self._ov_lock:
+            self._ov_img = annotated
+            self._ov_mask = mask          # uint8: cv2.copyTo wants a mask, not bools
+
+    def _publish_live(self, frame):
+        """Publish a fresh camera frame with the most recent annotation
+        stamped on it, so the video stays smooth while boxes refresh at
+        whatever rate the CPU sustains."""
+        import cv2
+        with self._ov_lock:
+            ov_img, ov_mask = self._ov_img, self._ov_mask
+        out = frame
+        if (ov_img is not None and ov_mask is not None
+                and ov_img.shape == frame.shape):
+            # cv2.copyTo stamps the painted pixels in C; numpy fancy-indexing
+            # the same mask is several times slower and this runs per frame.
+            out = cv2.copyTo(ov_img, ov_mask, frame.copy())
+        self._publish(out)
+
+    def _capture_loop(self, cap, W, H, scale):
+        """Reader thread: always hold the NEWEST frame and keep the stream
+        moving at camera rate, independent of how slow analysis is."""
+        import cv2
+        last_pub = 0.0
+        while self.running:
+            ok, frame = cap.read()
+            if not ok:
+                time.sleep(0.01)
+                continue
+            if scale != 1.0:
+                frame = cv2.resize(frame, (W, H), interpolation=cv2.INTER_AREA)
+            with self._lock:
+                self._latest = frame
+                self._latest_seq += 1
+                self._last_raw = frame
+            # Cap publishing at ~15 fps: smooth to the eye, and it leaves the
+            # CPU budget for detection rather than spending it on JPEG encode.
+            now = time.monotonic()
+            if now - last_pub >= 1 / 15.0:
+                last_pub = now
+                self._publish_live(frame)
+
     def _publish(self, frame_bgr):
         """Encode + downscale for streaming (bandwidth/encode-time friendly —
         detection still runs at full/imgsz resolution; only the JPEG we ship
@@ -122,7 +190,20 @@ class LiveProcessor:
             src, self.is_file = self.source, True
         else:
             src, self.is_file = self.source, True    # local file (played once)
-        return cv2.VideoCapture(src)
+        cap = cv2.VideoCapture(src)
+        if not self.is_file:
+            # A live source (webcam/RTSP/HTTP) keeps producing frames faster
+            # than our CPU can analyse them. OpenCV's default internal buffer
+            # (several frames deep) then fills up, and cap.read() starts
+            # returning older and older queued frames — the feed drifts
+            # further behind real time the longer it runs. Shrinking the
+            # buffer to 1 makes read() always hand back the newest frame
+            # instead. Not every backend honours this — harmless if ignored.
+            try:
+                cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+            except Exception:
+                pass
+        return cap
 
     def _loop(self):
         import cv2
@@ -222,7 +303,41 @@ class LiveProcessor:
             play_t0 = time.monotonic()
             dropped = 0
             paced = bool(self.is_file and fps > 0)
+            # A live camera gets a dedicated reader thread (see _capture_loop);
+            # a file is paced in this thread instead, where dropping frames is
+            # what keeps replay at true speed.
+            reader = None
+            if not self.is_file:
+                reader = threading.Thread(
+                    target=self._capture_loop, args=(cap, W, H, scale),
+                    daemon=True)
+                reader.start()
+            last_seq = -1
             while self.running:
+                # --- LIVE CAMERA: analyse the newest captured frame ---------
+                if not self.is_file:
+                    with self._lock:
+                        frame = self._latest
+                        seq = self._latest_seq
+                    if frame is None or seq == last_seq:
+                        time.sleep(0.005)      # nothing new yet
+                        continue
+                    skipped = (seq - last_seq - 1) if last_seq >= 0 else 0
+                    dropped += max(0, skipped)
+                    last_seq = seq
+                    cur = fidx
+                    fidx += 1
+                    annotated = pipeline.process_frame(
+                        model, engine, frame, cur, device, helmet_model,
+                        state, seatbelt_model, time.monotonic() - t0)
+                    self._set_overlay(frame, annotated)
+                    self.stats = {"frames": fidx, "dropped": dropped,
+                                  "vehicles": len(state["vehicle_ids"]),
+                                  "violations": len(engine.events)}
+                    if fidx % 15 == 0:
+                        db.set_meta("vehicle_count", len(state["vehicle_ids"]))
+                    continue
+
                 # --- real-time pacing for FILE replay ---------------------
                 # Detection on CPU is far slower than playback (a 4K clip
                 # analyses at ~1 fps against 25 fps of video). Without pacing
@@ -256,19 +371,15 @@ class LiveProcessor:
                 with self._lock:
                     self._last_raw = frame
 
-                # When pacing is on, dropping already throttles the analysis
-                # rate, so every decoded frame is worth analysing. Otherwise
-                # (live camera) the frame-skip selector does the throttling.
+                # Pacing already throttles the analysis rate by dropping
+                # frames, so every frame we still decode is worth analysing.
+                # File replay has exact per-frame timing, so speed uses
+                # frame_idx/fps (None) — still exact, because dropped frames
+                # don't change what frame number the analysed frame actually is.
                 if paced or cur % self.every == 0:
-                    # A live CAMERA delivers frames at a real (fluctuating) rate,
-                    # so measure speed against the wall clock. A FILE replay has
-                    # exact per-frame timing, so let it use frame_idx/fps (None)
-                    # — still exact here, because dropped frames don't change
-                    # what frame number the analysed frame actually is.
-                    ftime = None if self.is_file else (time.monotonic() - t0)
                     annotated = pipeline.process_frame(
                         model, engine, frame, cur, device, helmet_model,
-                        state, seatbelt_model, ftime)
+                        state, seatbelt_model, None)
                     self._publish(annotated)
 
                 self.stats = {"frames": fidx,

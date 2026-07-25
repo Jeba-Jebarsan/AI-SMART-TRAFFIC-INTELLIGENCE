@@ -68,6 +68,11 @@ SEATBELT_MODEL = str(MODELS_DIR / "seatbelt.pt")
 # in detection.py so importing this module never requires torch.
 DEVICE = "auto"
 
+# CPU threads for inference. None = auto (~2/3 of cores), which deliberately
+# leaves headroom so the live capture thread can keep the video smooth — see
+# detection._tune_cpu_threads(). Set an integer to override.
+TORCH_THREADS = None
+
 # Inference size. 960 finds small/distant vehicles far better than the 640
 # default at ~2x the CPU cost — worth it for CCTV footage.
 IMGSZ = 960
