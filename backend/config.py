@@ -354,6 +354,12 @@ SPEED_WINDOW_SECONDS = 2.5
 # ----------------------------------------------------------------------------
 # Allowed direction of travel in image space (dx, dy). (0, 1) = downward.
 ALLOWED_DIRECTION = (0, 1)
+# Lane region the allowed direction applies to, as [[x, y], ...] image points.
+# None = the whole frame, which is ONLY correct on a one-way street or when a
+# single carriageway fills the view. On a two-way road the opposing traffic is
+# lawfully driving the other way, so leaving this unset would flag every
+# oncoming vehicle as a violation. Set it to the one lane you are policing.
+WRONG_WAY_ZONE = None
 # Motion whose cosine-similarity with the allowed direction is below this is
 # flagged as wrong-way (-1 = exact opposite).
 WRONG_WAY_MIN_DOT = -0.5

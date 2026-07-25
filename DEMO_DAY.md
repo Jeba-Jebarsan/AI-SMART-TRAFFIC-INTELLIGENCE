@@ -45,10 +45,19 @@ current footage triggers them:
 
 | Rule | Blocker | Fix |
 |---|---|---|
-| No Helmet, Triple Riding, Wheelie, Phone Use | Your only bike clip (`srilanka.mp4`) is **parked bikes on a pavement**. The motion gate correctly refuses to fine them. | Shoot 60 s of real moving bike traffic (§3) |
-| Red Light Jump | No traffic light in any clip | Film one junction with a visible signal |
-| No Seatbelt | `models/seatbelt.pt` is missing | Drop in a YOLOv8 seatbelt model from Roboflow Universe |
-| Wrong Way | No direction calibrated | Set traffic direction in the 🎯 tool |
+| Red Light Jump | **No traffic light exists in any clip.** A scan of all footage found only one candidate, which on inspection was a *Bank of Ceylon sign on a utility pole*, not a signal. | Film 30 s at a signalised junction |
+| Wrong Way | No vehicle in any clip actually drives against traffic | Film (or stage, safely) a genuine wrong-way movement |
+
+**Do not fake either of these.** Lowering the traffic-light threshold makes the
+system read a shop sign as a signal and issue red-light challans — with real
+plates on them — against riders who never ran a light. Setting an unzoned
+travel direction on a two-way road flags every lawfully oncoming vehicle. Both
+turn your headline claim (evidence that holds up) into the opposite.
+
+If you can't get the footage, the honest demo is the **test suite**: both rules
+are implemented and proven by unit tests (`tests/test_wrongway.py`,
+`test_engine.py` cases F/F2). Run `python tests/run_all.py` on stage — 78
+passing tests, including the cases where each rule must *refuse* to fire.
 
 > **Say this out loud if asked.** "The system only reports what it can prove.
 > On a clip of parked motorcycles it reports nothing — that's the feature, not

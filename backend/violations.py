@@ -165,20 +165,19 @@ class ViolationEngine:
         net = math.hypot(win[-1][1] - win[0][1], win[-1][2] - win[0][2])
         return net >= max(12.0, config.MIN_MOVE_FRAC * self.h)
 
-    # -------------------------------------------------------- illegal parking
-    def _in_no_parking_zone(self, box):
-        """True when the vehicle sits inside the configured no-parking zone.
+    # ------------------------------------------------------------------ zones
+    @staticmethod
+    def _in_zone(box, zone):
+        """True when a vehicle's ground contact point falls inside `zone`.
 
-        With no zone configured the whole frame counts, which is only safe on
-        a camera pointed at a genuine no-stopping area — otherwise every
-        vehicle waiting in traffic eventually qualifies. Set
-        config.NO_PARKING_ZONE to the kerb/junction area for a real deployment.
+        A zone of None means "everywhere". Uses the bottom-centre of the box
+        (where the vehicle meets the road) rather than the box centre, so a
+        tall vehicle isn't judged by a point floating above the carriageway.
         """
-        zone = config.NO_PARKING_ZONE
         if not zone:
             return True
         cx = (box[0] + box[2]) / 2.0
-        cy = box[3]                      # ground contact point, not the centre
+        cy = box[3]
         inside = False
         n = len(zone)
         for i in range(n):               # ray-casting point-in-polygon
@@ -189,6 +188,17 @@ class ViolationEngine:
                 if cx < xin:
                     inside = not inside
         return inside
+
+    # -------------------------------------------------------- illegal parking
+    def _in_no_parking_zone(self, box):
+        """True when the vehicle sits inside the configured no-parking zone.
+
+        With no zone configured the whole frame counts, which is only safe on
+        a camera pointed at a genuine no-stopping area — otherwise every
+        vehicle waiting in traffic eventually qualifies. Set
+        config.NO_PARKING_ZONE to the kerb/junction area for a real deployment.
+        """
+        return self._in_zone(box, config.NO_PARKING_ZONE)
 
     def _parked_seconds(self, tid, frame_idx, signal):
         """Seconds this vehicle has been continuously STATIONARY.
@@ -293,10 +303,15 @@ class ViolationEngine:
                     ev["speed_kmph"] = round(spd, 1)
                     new.append(ev)
 
-            # --- Wrong-way (only when a per-camera direction is calibrated)
+            # --- Wrong-way (only when a per-camera direction is calibrated,
+            # and only inside the lane zone that direction describes. On a
+            # two-way road the opposing carriageway is lawfully travelling the
+            # other way, so an unzoned direction rule would flag every one of
+            # those vehicles — the zone is what makes this safe to enable.)
             if (config.ENABLE["wrong_way"] and self.allowed_dir
                     and "wrong" not in st["emitted"]
                     and conf_ok and self.is_moving(tid)
+                    and self._in_zone(v["box"], config.WRONG_WAY_ZONE)
                     and len(st["cent"]) >= 6 and self._wrong_way(st["cent"])):
                 st["emitted"].add("wrong")
                 new.append(self._event("Wrong Way", tid, v["box"], frame_idx, ts))
