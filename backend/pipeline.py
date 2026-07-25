@@ -592,29 +592,31 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
         _corner_box(out, v["box"], (0, 0, 255) if flagged else col,
                     3 if flagged else 2)
 
-        name = _CLS_NAMES.get(v["cls"], "Vehicle")
-        label = f"{name} #{tid}" if tid is not None else name
-        _put_tag(out, label, x1, max(y1, 14), col, 0.5 * sc + 0.15)
-
-        # SPEED chip centred ABOVE the vehicle — red when over the limit
         spd = speeds.get(tid) if speeds else None
         approx = engine.transform_fn is None
-        lift = 0
+
+        # Speed rides INLINE with the ID so every measured vehicle shows its
+        # km/h continuously — not only at the instant it violates something.
+        name = _CLS_NAMES.get(v["cls"], "Vehicle")
+        label = f"{name} #{tid}" if tid is not None else name
         if spd:
-            stext = (f"~{spd} km/h" if approx else f"{spd} km/h")
+            label += f"  {'~' if approx else ''}{spd} km/h"
+        _put_tag(out, label, x1, max(y1, 14), col, 0.5 * sc + 0.15)
+
+        # Big SPEED chip above the vehicle, reserved for OVER-LIMIT vehicles so
+        # a violation still pops; ordinary speeds read fine inline above.
+        lift = 0
+        if spd and (not approx) and spd > config.SPEED_LIMIT_KMPH:
+            stext = f"{spd} km/h"
             fs = 0.6 * sc + 0.2
             (tw2, th2), _ = cv2.getTextSize(stext, cv2.FONT_HERSHEY_SIMPLEX,
                                             fs, 2)
             scx = max(2, min((x1 + x2) // 2 - tw2 // 2 - 6, w - tw2 - 14))
             scy = max(int(34 * sc) + 16, y1 - 8 - th2 - 10)
-            # only paint the "over the limit" red when speed is CALIBRATED —
-            # an approximate speed is informational, never an accusation
-            over = (not approx) and spd > config.SPEED_LIMIT_KMPH
             cv2.rectangle(out, (scx, scy), (scx + tw2 + 12, scy + th2 + 10),
-                          (0, 0, 200) if over else (30, 30, 30), -1)
+                          (0, 0, 200), -1)
             cv2.putText(out, stext, (scx + 6, scy + th2 + 3),
-                        cv2.FONT_HERSHEY_SIMPLEX, fs,
-                        (255, 255, 255) if over else (80, 255, 255), 2,
+                        cv2.FONT_HERSHEY_SIMPLEX, fs, (255, 255, 255), 2,
                         cv2.LINE_AA)
             lift = th2 + 22                     # keep the plate banner clear
 
