@@ -203,7 +203,19 @@ ENABLE = {
     "no_rest_break": True,   # continuous-driving / fatigue rule
     "wheelie": True,         # motorcycle wheelie / stunt riding (heuristic)
     "phone_use": True,       # rider/driver on a phone (COCO cell-phone detection)
+    "illegal_parking": True, # vehicle stationary far too long to be traffic
 }
+
+# ----------------------------------------------------------------------------
+# Illegal parking — a vehicle that stays STATIONARY this long is parked, not
+# waiting. Stopping is not parking, so the clock is held while the signal reads
+# RED and is reset by any real movement; the threshold must stay comfortably
+# longer than a plausible traffic queue or jams become "violations".
+ILLEGAL_PARK_SECONDS = 45
+# Optional no-parking area as [[x, y], ...] image points (e.g. the kerb by a
+# junction). None = the whole frame counts, which is only honest on a camera
+# aimed at a genuine no-stopping zone — otherwise set this for a deployment.
+NO_PARKING_ZONE = None
 
 # ----------------------------------------------------------------------------
 # Continuous-driving / rest-break rule — flags a vehicle that this camera has
@@ -232,6 +244,7 @@ FINES = {   # Sri Lankan spot-fine style amounts (LKR)
     "No Rest Break": 2000,
     "Wheelie Stunt": 5000,       # dangerous stunt riding — heaviest spot fine
     "Mobile Phone Use": 2000,
+    "Illegal Parking": 1000,
 }
 
 # Emoji / label metadata used by the pipeline + dashboard
@@ -245,6 +258,7 @@ VIOLATION_META = {
     "No Rest Break":   {"emoji": "⏱",  "color": "#f97316"},
     "Wheelie Stunt":   {"emoji": "🛞", "color": "#ec4899"},
     "Mobile Phone Use":{"emoji": "📱", "color": "#06b6d4"},
+    "Illegal Parking": {"emoji": "🅿", "color": "#8b5cf6"},
 }
 
 # ----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SUITES = ["test_engine.py", "test_seatbelt.py", "test_restbreak.py",
-          "test_speed.py", "test_stunts.py"]
+          "test_speed.py", "test_stunts.py", "test_parking.py"]
 
 failed = []
 for s in SUITES:

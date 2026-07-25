@@ -151,6 +151,8 @@ def main():
     print("   --   Mobile Phone Use  needs a visible phone in a rider/driver's hand")
     print("   --   No Rest Break     needs one vehicle tracked continuously for "
           f"{config.MAX_CONTINUOUS_DRIVE_SECONDS}s")
+    print("   --   Illegal Parking   needs a vehicle stationary for "
+          f"{config.ILLEGAL_PARK_SECONDS}s (clip must be longer than that)")
 
     if blocked:
         print("\nTO UNBLOCK")

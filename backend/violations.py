@@ -63,6 +63,7 @@ class ViolationEngine:
                      "nh_hits": 0, "triple_hits": 0, "sb_hits": 0,
                      "wheelie_hits": 0, "phone_hits": 0,
                      "drive_start": None, "stop_start": None,
+                     "park_start": None,
                      "emitted": set(), "cls": None})
         self.events = []
         # Signal-state memory — honest detection, never invented when absent.
@@ -164,6 +165,48 @@ class ViolationEngine:
         net = math.hypot(win[-1][1] - win[0][1], win[-1][2] - win[0][2])
         return net >= max(12.0, config.MIN_MOVE_FRAC * self.h)
 
+    # -------------------------------------------------------- illegal parking
+    def _in_no_parking_zone(self, box):
+        """True when the vehicle sits inside the configured no-parking zone.
+
+        With no zone configured the whole frame counts, which is only safe on
+        a camera pointed at a genuine no-stopping area — otherwise every
+        vehicle waiting in traffic eventually qualifies. Set
+        config.NO_PARKING_ZONE to the kerb/junction area for a real deployment.
+        """
+        zone = config.NO_PARKING_ZONE
+        if not zone:
+            return True
+        cx = (box[0] + box[2]) / 2.0
+        cy = box[3]                      # ground contact point, not the centre
+        inside = False
+        n = len(zone)
+        for i in range(n):               # ray-casting point-in-polygon
+            x1, y1 = zone[i]
+            x2, y2 = zone[(i + 1) % n]
+            if (y1 > cy) != (y2 > cy):
+                xin = x1 + (cy - y1) * (x2 - x1) / float(y2 - y1 or 1e-9)
+                if cx < xin:
+                    inside = not inside
+        return inside
+
+    def _parked_seconds(self, tid, frame_idx, signal):
+        """Seconds this vehicle has been continuously STATIONARY.
+
+        Stopping is not parking: a red light or a queue is lawful, so the
+        clock is held while the signal reads RED, and the threshold is long
+        enough that ordinary congestion doesn't reach it. Any real movement
+        resets the clock, so only a vehicle that genuinely stays put counts.
+        """
+        st = self.tracks[tid]
+        if self.is_moving(tid) or signal == "RED":
+            st["park_start"] = None
+            return 0.0
+        if st["park_start"] is None:
+            st["park_start"] = frame_idx
+            return 0.0
+        return (frame_idx - st["park_start"]) / self.fps
+
     # ------------------------------------------------------------ rest-break
     def _continuous_drive_seconds(self, tid, frame_idx):
         """Update rest-break bookkeeping for this track and return seconds of
@@ -257,6 +300,17 @@ class ViolationEngine:
                     and len(st["cent"]) >= 6 and self._wrong_way(st["cent"])):
                 st["emitted"].add("wrong")
                 new.append(self._event("Wrong Way", tid, v["box"], frame_idx, ts))
+
+            # --- Illegal parking (stationary far too long to be traffic)
+            if config.ENABLE["illegal_parking"] and "park" not in st["emitted"]:
+                park_secs = self._parked_seconds(tid, frame_idx, signal)
+                if (park_secs >= config.ILLEGAL_PARK_SECONDS and conf_ok
+                        and self._in_no_parking_zone(v["box"])):
+                    st["emitted"].add("park")
+                    ev = self._event("Illegal Parking", tid, v["box"],
+                                     frame_idx, ts)
+                    ev["parked_seconds"] = round(park_secs, 1)
+                    new.append(ev)
 
             # --- Continuous driving / no rest break (fatigue rule)
             if config.ENABLE["no_rest_break"]:
