@@ -105,6 +105,10 @@ CONF = {
     "person": 0.40,      # person conf required to count as a rider
     "light": 0.45,       # traffic-light conf required to read signal colour
     "no_helmet": 0.50,   # helmet-model 'Without Helmet' must be this sure
+    # Claiming a rider IS compliant needs to be at least as certain as
+    # accusing them. A low bar here put "HELMET OK" under visibly bare heads,
+    # which reads as broken to anyone looking at the screen.
+    "helmet_ok": 0.55,
     "no_seatbelt": 0.50, # seatbelt-model 'No Seatbelt' must be this sure
     "phone": 0.35,       # COCO 'cell phone' conf required to count as phone-use
 }

@@ -286,13 +286,25 @@ def build_riders(frame, motos, persons, helmet_model):
                 names = r.names
                 if r.boxes is None:
                     continue
+                # Decide by the model's STRONGEST signal on this rider, rather
+                # than letting whichever class happens to clear its own
+                # threshold win. The thresholds are asymmetric (a bare head
+                # must be clearer than a helmet before we act on it), so a
+                # weak 0.35 "helmet" used to override a strong "no helmet" on
+                # the same head — which is how a visibly bare-headed rider got
+                # labelled HELMET OK.
+                best_no, best_yes = 0.0, 0.0
                 for b in r.boxes:
                     label = names[int(b.cls[0])]
                     conf = float(b.conf[0])
-                    if _is_no_helmet(label) and conf >= config.CONF["no_helmet"]:
-                        no_helmet = True
-                    elif _is_helmet(label) and conf >= 0.35:
-                        helmet_ok = True
+                    if _is_no_helmet(label):
+                        best_no = max(best_no, conf)
+                    elif _is_helmet(label):
+                        best_yes = max(best_yes, conf)
+                if best_no >= config.CONF["no_helmet"] and best_no >= best_yes:
+                    no_helmet = True
+                elif best_yes >= config.CONF["helmet_ok"] and best_yes > best_no:
+                    helmet_ok = True
             if helmet_ok and no_helmet:
                 # Two riders disagreeing (pillion bare, rider helmeted) is a
                 # real violation, so no_helmet wins.

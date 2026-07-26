@@ -63,7 +63,7 @@ class ViolationEngine:
                      "nh_hits": 0, "triple_hits": 0, "sb_hits": 0,
                      "wheelie_hits": 0, "phone_hits": 0,
                      "drive_start": None, "stop_start": None,
-                     "park_start": None,
+                     "park_start": None, "ever_moved": False,
                      "emitted": set(), "cls": None})
         self.events = []
         # Signal-state memory — honest detection, never invented when absent.
@@ -230,6 +230,15 @@ class ViolationEngine:
         """
         st = self.tracks[tid]
         if self.is_moving(tid) or signal == "RED":
+            st["park_start"] = None
+            st["ever_moved"] = True
+            return 0.0
+        # A vehicle this camera has ever seen driving is traffic, not parked.
+        # The motion gate can miss movement on a sparsely sampled or briefly
+        # occluded track, and without this a car merely crawling in a queue
+        # accumulated "parked" time and was fined. Once seen moving, a track
+        # is permanently exempt for the rest of its life.
+        if st.get("ever_moved"):
             st["park_start"] = None
             return 0.0
         if st["park_start"] is None:
