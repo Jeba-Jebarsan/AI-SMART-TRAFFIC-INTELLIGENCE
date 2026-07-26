@@ -192,16 +192,19 @@ check("I1 single mid-conf read NOT confirmed", not p["confirmed"])
 _record_read(plates, 8, "WPCAB 4821", 0.95, None)     # one read, very confident
 check("I1b even a 0.95 single read NOT confirmed", not plates[8]["confirmed"])
 _record_read(plates, 9, "0217256", 0.40, None)        # frame 2: letters lost
+check("I1c two agreeing reads still NOT confirmed (needs three)",
+      not plates[9]["confirmed"])
+_record_read(plates, 9, "KA 02 IH 7256", 0.45, None)  # frame 3: same tail again
 p = plates[9]
 check("I2 same digit-tail pools votes -> confirmed",
-      p["confirmed"] and p["hits"] == 2)
+      p["confirmed"] and p["hits"] == 3)
 check("I3 representative is the letter-bearing text",
       p["text"] == "KA 02 IH 7256")
 _record_read(plates, 9, "KA 02 MH 7256", 0.50, None)  # frame 3: clean read
 _record_read(plates, 9, "KA 02 MH 7256", 0.55, None)  # frame 4: again
 p = plates[9]
 check("I4 repeated clean read becomes the representative",
-      p["text"] == "KA 02 MH 7256" and p["hits"] == 4)
+      p["text"] == "KA 02 MH 7256" and p["hits"] == 5)
 
 fails = [n for n, c in PASSED if not c]
 print(f"\n{len(PASSED) - len(fails)}/{len(PASSED)} passed")

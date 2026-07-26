@@ -158,7 +158,11 @@ MOVE_WINDOW_SECONDS = 2.5
 # Continuous ANPR — plates are read for every tracked vehicle (not only
 # violators), so the dashboard proves number-plate recognition on any clip.
 # ----------------------------------------------------------------------------
-ANPR_EVERY = 5           # try plate detection every N analyzed frames
+# Try plate detection every N analysed frames. Lower = more attempts per
+# vehicle, which matters because live analysis runs at only ~2 fps: at the old
+# value of 5 a vehicle got a plate attempt roughly every 2.5 seconds and often
+# left the frame with none.
+ANPR_EVERY = 3
 ANPR_MIN_VEH_H = 48      # min vehicle box height in px (scaled up on >720p)
 ANPR_MAX_PER_FRAME = 3   # OCR at most N vehicles per ANPR frame (CPU budget)
 ANPR_GOOD_CONF = 0.80    # stop re-reading a track once this confident
@@ -186,7 +190,14 @@ LIVE_MAX_H = 1080
 # challans) only when reads agreeing on the same digit-tail were seen in at
 # least this many different frames. One read is NEVER proof, however
 # confident — a wrong number on a challan is worse than no number.
-PLATE_CONFIRM_READS = 2
+#
+# THREE, not two: more frequent OCR attempts also mean more chances for two
+# wrong reads to agree by accident. Measured on real footage, two-read
+# confirmation turned "NP BBJ 8752" into "EEBBJ 8752" and "AAG 4002" into
+# "HL 164002"; requiring three agreeing reads recovered "BBJ 8752" cleanly.
+# A challan carries this number to the police, so precision beats coverage —
+# an unread plate says UNREADABLE, which is recoverable; a wrong one is not.
+PLATE_CONFIRM_READS = 3
 
 # ----------------------------------------------------------------------------
 # Police alert emails — auto-send an e-challan with photo evidence when a
