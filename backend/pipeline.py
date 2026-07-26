@@ -237,27 +237,40 @@ def build_riders(frame, motos, persons, helmet_model):
         big_enough = (my2 - my1) >= config.MIN_MOTO_PX
 
         if n >= 1 and big_enough and helmet_model is not None:
-            # Real model on the motorcycle+rider crop (extends above the bike
-            # box to include rider heads).
-            mh, mw = my2 - my1, mx2 - mx1
-            crop = frame[int(_clip(my1 - mh * 0.6, 0, H)):int(_clip(my2, 0, H)),
-                         int(_clip(mx1 - mw * 0.1, 0, W)):int(_clip(mx2 + mw * 0.1, 0, W))]
-            if crop.size:
+            # Judge each ASSOCIATED RIDER's own head region, not one wide crop
+            # around the motorcycle. In dense traffic a bike-sized crop sweeps
+            # in the riders of neighbouring bikes and pedestrians, so a bare
+            # head anywhere nearby flagged THIS rider — observed falsely
+            # accusing a helmeted pair because another rider sat just behind
+            # them. Cropping per rider keeps the verdict about that person.
+            for p in onboard:
+                px1, py1, px2, py2 = p["box"]
+                pw, ph = px2 - px1, py2 - py1
+                # head-and-shoulders: top third of the person, padded, since
+                # the person box can start at the chin on a leaning rider.
+                hx1 = _clip(px1 - pw * 0.25, 0, W)
+                hx2 = _clip(px2 + pw * 0.25, 0, W)
+                hy1 = _clip(py1 - ph * 0.25, 0, H)
+                hy2 = _clip(py1 + ph * 0.45, 0, H)
+                crop = frame[int(hy1):int(hy2), int(hx1):int(hx2)]
+                if crop.size == 0 or min(crop.shape[:2]) < 12:
+                    continue
                 r = helmet_model.predict(crop, verbose=False, conf=0.30,
                                          device=resolve_device())[0]
                 names = r.names
-                if r.boxes is not None:
-                    for b in r.boxes:
-                        label = names[int(b.cls[0])]
-                        conf = float(b.conf[0])
-                        if _is_no_helmet(label) and conf >= config.CONF["no_helmet"]:
-                            no_helmet = True
-                        elif _is_helmet(label) and conf >= 0.35:
-                            helmet_ok = True
-                if helmet_ok and no_helmet:
-                    # both seen (e.g. pillion without, rider with) — trust the
-                    # stronger signal conservatively: keep no_helmet only.
-                    helmet_ok = False
+                if r.boxes is None:
+                    continue
+                for b in r.boxes:
+                    label = names[int(b.cls[0])]
+                    conf = float(b.conf[0])
+                    if _is_no_helmet(label) and conf >= config.CONF["no_helmet"]:
+                        no_helmet = True
+                    elif _is_helmet(label) and conf >= 0.35:
+                        helmet_ok = True
+            if helmet_ok and no_helmet:
+                # Two riders disagreeing (pillion bare, rider helmeted) is a
+                # real violation, so no_helmet wins.
+                helmet_ok = False
         elif n >= 1 and big_enough:
             # Heuristic fallback (no helmet model installed): a helmet is a
             # large uniform saturated patch at the rider's head. Conservative;
