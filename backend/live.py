@@ -251,6 +251,10 @@ class LiveProcessor:
                 W, H, fps,
                 transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
                 allowed_direction=cal_dir, ppm=ppm)
+            sly = pipeline.load_stop_line_y(
+                self.source if self.is_file else None, src_w, src_h)
+            if sly:
+                engine.stop_line_y = sly * H
             self._engine = engine
 
             db.init_db()

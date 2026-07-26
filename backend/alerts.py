@@ -144,14 +144,37 @@ def _smtp_config():
 
 def alerts_ready():
     a, user, password = _smtp_config()
+    if a.get("mode") == "outbox":
+        return bool(a.get("enabled") and a.get("to"))
     return bool(a.get("enabled") and a.get("to") and user and password)
+
+
+def _deliver_to_outbox(msg, v):
+    """Write the complete police email to disk instead of sending it.
+
+    Demo mode. The .eml holds the exact MIME message — body, PDF challan,
+    evidence photo and plate crop — that would reach the police mailbox, so it
+    can be opened and shown without configuring real credentials or mailing a
+    real inbox. It is recorded as an outbox file, never reported as 'sent'.
+    """
+    outbox = config.OUTPUT_DIR / "outbox"
+    outbox.mkdir(parents=True, exist_ok=True)
+    name = f"{v.get('challan_id') or 'challan'}.eml"
+    path = outbox / name
+    path.write_bytes(bytes(msg))
+    db.set_meta("alerts_sent", (db.get_meta("alerts_sent", 0) or 0) + 1)
+    return True, f"DEMO MODE — police email written to {path.name} (not sent)"
 
 
 def send_alert(v: dict):
     """Send one violation to the police mailbox. Returns (ok, message)."""
     a, user, password = _smtp_config()
-    if not (a.get("to") and user and password):
+    outbox_mode = a.get("mode") == "outbox"
+    if not a.get("to"):
+        return False, "no recipient configured (config.ALERTS['to'])"
+    if not outbox_mode and not (user and password):
         return False, "alerts not configured (see config.ALERTS / SMTP_USER, SMTP_PASS)"
+    user = user or "ai-traffic@demo.local"
 
     plate = v.get("plate") or "UNKNOWN"
     msg = EmailMessage()
@@ -196,6 +219,13 @@ Detected and verified automatically by AI Smart Traffic Intelligence
             if p.exists():
                 msg.add_attachment(p.read_bytes(), maintype="image",
                                    subtype="jpeg", filename=fname)
+
+    if outbox_mode:
+        try:
+            return _deliver_to_outbox(msg, v)
+        except Exception as e:
+            db.set_meta("alert_error", str(e)[:200])
+            return False, str(e)
 
     try:
         with _send_lock:                      # one SMTP session at a time

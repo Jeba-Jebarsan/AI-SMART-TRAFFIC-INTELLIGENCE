@@ -122,6 +122,32 @@ def save_calibration(key, points, target_m, direction=None):
                                        encoding="utf-8")
 
 
+def load_stop_line_y(video_path=None, frame_w=None, frame_h=None):
+    """Per-camera virtual stop line (0-1 of frame height), or None.
+
+    Read from a "stop_line_y" key in the same calibration.json entry. Where
+    the stop line falls in frame depends entirely on how the camera is aimed,
+    so a single global default is right for no one: on junction CCTV the line
+    sits near the bottom of frame, while a high mast view puts it mid-frame.
+    """
+    entries = {}
+    try:
+        entries = json.loads(config.CALIBRATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    keys = []
+    if video_path:
+        import os
+        keys.append(os.path.basename(str(video_path)))
+    if frame_w and frame_h:
+        keys.append(f"{int(frame_w)}x{int(frame_h)}")
+    for k in keys:
+        e = entries.get(k) or {}
+        if e.get("stop_line_y"):
+            return float(e["stop_line_y"])
+    return None
+
+
 def load_pixels_per_meter(video_path=None, frame_w=None, frame_h=None):
     """Per-camera pixels-per-metre for APPROX (uncalibrated) speed, or None.
 

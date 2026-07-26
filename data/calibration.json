@@ -97,5 +97,9 @@
   },
   "IMG_6992.MOV": {
     "pixels_per_meter": 37
+  },
+  "redlight_cctv.mp4": {
+    "stop_line_y": 0.8,
+    "pixels_per_meter": 26
   }
 }

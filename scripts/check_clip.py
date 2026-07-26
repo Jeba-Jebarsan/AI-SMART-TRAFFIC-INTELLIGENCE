@@ -90,6 +90,9 @@ def main():
         W, H, fps,
         transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
         allowed_direction=cal_dir, ppm=ppm)
+    sly = pipeline.load_stop_line_y(path, src_w, src_h)
+    if sly:
+        engine.stop_line_y = sly * H
     db.init_db()
     db.clear()
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)

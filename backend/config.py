@@ -206,8 +206,14 @@ PLATE_CONFIRM_READS = 3
 # Credentials can also come from env vars SMTP_USER / SMTP_PASS.
 # ----------------------------------------------------------------------------
 ALERTS = {
-    "enabled": False,             # master switch (True once configured)
-    "auto_send": True,            # email immediately on each new violation
+    "enabled": True,              # master switch
+    # "outbox" = DEMO MODE: write the complete police email (body + PDF
+    # challan + evidence photo + plate crop) to data/output/outbox/*.eml
+    # instead of sending it. Lets "Send to Police" be demonstrated end to end
+    # without real credentials and without mailing a real inbox. Switch to
+    # "smtp" and fill in user/password below for an actual deployment.
+    "mode": "outbox",
+    "auto_send": True,            # deliver immediately on each new violation
     "to": "traffic.police@example.lk",
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,
