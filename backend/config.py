@@ -64,6 +64,18 @@ PLATE_MODEL = str(MODELS_DIR / "license_plate_detector.pt")
 # detection" YOLOv8 models you can drop in here).
 SEATBELT_MODEL = str(MODELS_DIR / "seatbelt.pt")
 
+# OPTIONAL drop-in three-wheeler / auto-rickshaw detector.
+#
+# COCO — and therefore base YOLOv8 — has NO three-wheeler class, so Sri Lankan
+# tuk-tuks are detected as "truck" (verified: a blue three-wheeler scored
+# truck 0.78, while a real box lorry in the same frame scored truck 0.46).
+# Their bounding boxes overlap in aspect ratio too, so no geometric heuristic
+# can separate them honestly — it needs a trained model. Drop one here and the
+# pipeline relabels those vehicles automatically; without it they stay
+# labelled by whatever COCO class the detector chose. Violation logic is
+# unaffected either way, this only changes the displayed class.
+THREEWHEELER_MODEL = str(MODELS_DIR / "threewheeler.pt")
+
 # "auto" picks the GPU if torch+CUDA are available, else CPU. Resolved lazily
 # in detection.py so importing this module never requires torch.
 DEVICE = "auto"

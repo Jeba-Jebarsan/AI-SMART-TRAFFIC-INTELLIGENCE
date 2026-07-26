@@ -12,6 +12,7 @@ _vehicle = None
 _helmet = None
 _plate = None
 _seatbelt = None
+_threewheeler = None
 _device = None
 
 
@@ -78,6 +79,24 @@ def load_plate():
         from ultralytics import YOLO
         _plate = YOLO(config.PLATE_MODEL)
     return _plate
+
+
+def has_threewheeler_model():
+    return os.path.exists(config.THREEWHEELER_MODEL)
+
+
+def load_threewheeler():
+    """Load (and cache) the optional three-wheeler detector, or return None.
+
+    Without it, tuk-tuks keep whatever COCO class the base detector picked
+    (usually 'truck'), which is a labelling inaccuracy only — no violation
+    rule depends on the distinction.
+    """
+    global _threewheeler
+    if _threewheeler is None and has_threewheeler_model():
+        from ultralytics import YOLO
+        _threewheeler = YOLO(config.THREEWHEELER_MODEL)
+    return _threewheeler
 
 
 def has_seatbelt_model():

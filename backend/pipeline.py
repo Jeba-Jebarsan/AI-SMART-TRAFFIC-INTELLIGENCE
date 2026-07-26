@@ -23,7 +23,7 @@ import config
 import db
 import ocr
 from challan import make_challan_id
-from detection import load, load_seatbelt, resolve_device
+from detection import load, load_seatbelt, load_threewheeler, resolve_device
 from location import resolve_location
 from violations import ViolationEngine, centroid
 
@@ -530,6 +530,39 @@ _PALETTE = {
 _CLS_NAMES = {1: "Bicycle", 2: "Car", 3: "Motorcycle", 5: "Bus", 7: "Truck"}
 
 
+def apply_threewheeler_labels(frame, vehicles):
+    """Relabel vehicles the optional three-wheeler model recognises.
+
+    COCO has no three-wheeler class, so tuk-tuks arrive labelled 'Truck'. When
+    models/threewheeler.pt is installed, any vehicle box that substantially
+    overlaps a three-wheeler detection is renamed. A no-op when the model is
+    absent, which is the default.
+    """
+    model = load_threewheeler()
+    if model is None or not vehicles:
+        return {}
+    r = model.predict(frame, verbose=False, conf=0.35,
+                      device=resolve_device())[0]
+    if r.boxes is None or not len(r.boxes):
+        return {}
+    dets = [[float(x) for x in b.xyxy[0].tolist()] for b in r.boxes]
+    out = {}
+    for v in vehicles:
+        tid = v.get("track_id")
+        if tid is None:
+            continue
+        for d in dets:
+            # IoU-style overlap of the detection against the vehicle box
+            ix1, iy1 = max(d[0], v["box"][0]), max(d[1], v["box"][1])
+            ix2, iy2 = min(d[2], v["box"][2]), min(d[3], v["box"][3])
+            inter = max(0.0, ix2 - ix1) * max(0.0, iy2 - iy1)
+            area = max(1.0, (d[2] - d[0]) * (d[3] - d[1]))
+            if inter / area >= 0.55:
+                out[tid] = "Three Wheeler"
+                break
+    return out
+
+
 def _put_tag(out, text, x, y, color, scale=0.5, thick=1):
     """Text with a dark backing strip so labels stay readable on any footage."""
     import cv2
@@ -636,7 +669,8 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
 
         # Speed rides INLINE with the ID so every measured vehicle shows its
         # km/h continuously — not only at the instant it violates something.
-        name = _CLS_NAMES.get(v["cls"], "Vehicle")
+        name = (state.get("threewheelers", {}).get(tid)
+                or _CLS_NAMES.get(v["cls"], "Vehicle"))
         label = f"{name} #{tid}" if tid is not None else name
         if spd:
             label += f"  {'~' if approx else ''}{spd} km/h"
@@ -977,6 +1011,9 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state,
                     m["last_seen"] = video_s
                     m["cls"] = _CLS_NAMES.get(cls, "Vehicle")
                     state["dirty_vehicles"].add(tid)
+                    v3 = state.get("threewheelers")
+                    if v3 and tid in v3:
+                        m["cls"] = v3[tid]
                 if (cls == config.COCO["motorcycle"]
                         and conf >= config.CONF["moto_rider"]):
                     motos.append({"track_id": tid, "box": box})
@@ -998,6 +1035,12 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state,
     riders = build_riders(frame, motos, persons, helmet_model)
     belts = build_seatbelt_status(frame, cars, seatbelt_model)
     phone_status = build_phone_status(motos, cars, persons, phones)
+    # Three-wheeler relabelling, when the optional model is installed. Labels
+    # persist per track, so this needn't run on every analysed frame.
+    if fidx % 5 == 0:
+        found = apply_threewheeler_labels(frame, vehicles)
+        if found:
+            state.setdefault("threewheelers", {}).update(found)
 
     # remember each track's biggest (closest) appearance for the final
     # slow-motion plate sweep — like scrubbing the video frame by frame
