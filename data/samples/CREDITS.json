@@ -1,0 +1,37 @@
+[
+  {
+    "file": "data/samples/triple_phone.jpg",
+    "title": "File:Three persons riding on a 2 wheeler and talking on mobile in Hyderabad, India.jpg",
+    "license": "CC BY-SA 2.0",
+    "author": "Luca Sartoni",
+    "source": "https://commons.wikimedia.org/wiki/File%3AThree%20persons%20riding%20on%20a%202%20wheeler%20and%20talking%20on%20mobile%20in%20Hyderabad%2C%20India.jpg"
+  },
+  {
+    "file": "data/samples/triple_riding.jpg",
+    "title": "File:Three persons riding on a 2 wheeler in Hyderabad, India.jpg",
+    "license": "CC BY-SA 2.0",
+    "author": "Luca Sartoni",
+    "source": "https://commons.wikimedia.org/wiki/File%3AThree%20persons%20riding%20on%20a%202%20wheeler%20in%20Hyderabad%2C%20India.jpg"
+  },
+  {
+    "file": "data/samples/pune_traffic.jpg",
+    "title": "File:Mix of traffic on Pune roads.jpg",
+    "license": "CC BY 4.0",
+    "author": "Ganesh Dhamodkar",
+    "source": "https://commons.wikimedia.org/wiki/File%3AMix%20of%20traffic%20on%20Pune%20roads.jpg"
+  },
+  {
+    "file": "data/samples/phone_in_car.jpg",
+    "title": "File:Hand held phone in car.JPG",
+    "license": "CC BY-SA 3.0",
+    "author": "Ed Poor at English Wikipedia",
+    "source": "https://commons.wikimedia.org/wiki/File%3AHand%20held%20phone%20in%20car.JPG"
+  },
+  {
+    "file": "data/samples/traffic_violations.jpg",
+    "title": "File:Hyderabad India TrafficViolations.jpg",
+    "license": "CC BY-SA 2.0",
+    "author": "Luca Sartoni",
+    "source": "https://commons.wikimedia.org/wiki/File%3AHyderabad%20India%20TrafficViolations.jpg"
+  }
+]
