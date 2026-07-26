@@ -149,6 +149,10 @@ MIN_CAR_H_FRAC = 0.10
 # roadside scooters can never trigger helmet / triple-riding / red-light.
 # Threshold: displacement per second as a fraction of frame height.
 MIN_MOVE_FRAC = 0.02
+# Length of the movement window in SECONDS. Time-based, not frame-based, so
+# the motion gate behaves identically whether the analyser manages 25 fps or
+# the 1-2 fps a CPU laptop reaches on live 1080p.
+MOVE_WINDOW_SECONDS = 2.5
 
 # ----------------------------------------------------------------------------
 # Continuous ANPR — plates are read for every tracked vehicle (not only
@@ -239,6 +243,10 @@ ENABLE = {
 # genuinely abandoned, not briefly waiting). 20s is short enough to be observed
 # inside a ~50s demo clip. Raise it for an actual deployment.
 ILLEGAL_PARK_SECONDS = 20
+# A track must have been observed at least this many times before it can be
+# accused of parking. Absence of observed movement is not evidence of
+# stillness — a briefly-glimpsed vehicle must never be fined.
+PARK_MIN_OBSERVATIONS = 12
 # Optional no-parking area as [[x, y], ...] image points (e.g. the kerb by a
 # junction). None = the whole frame counts, which is only honest on a camera
 # aimed at a genuine no-stopping zone — otherwise set this for a deployment.

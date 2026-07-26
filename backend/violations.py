@@ -151,19 +151,39 @@ class ViolationEngine:
             st["move"].append((frame_idx, st["vx"], st["vy"]))
 
     def is_moving(self, tid):
-        """True when the track's NET compensated displacement over the last
-        ~second is significant. Net displacement (end minus start position)
-        is immune to detector-box jitter: a parked bike whose box wobbles
-        +-2px every frame goes nowhere, while a real rider covers distance."""
+        """True when the track's NET compensated displacement is significant.
+
+        Net displacement (end minus start) is immune to detector-box jitter: a
+        parked bike whose box wobbles +-2px every frame goes nowhere, while a
+        real rider covers distance.
+
+        The window is expressed in TIME and needs only two observations,
+        because the analyser does not run at the video frame rate — live
+        replay drops whatever frames the CPU was too busy for. The previous
+        version demanded 3 samples inside a 1-second window; once analysis
+        dropped below ~3 fps almost nothing qualified, and on real footage
+        89% of genuinely moving vehicles were judged stationary. Everything
+        gated on motion (helmet, triple riding, phone, wheelie, speed) was
+        silently suppressed, and Illegal Parking fired on moving traffic.
+
+        The distance required scales with how long the window actually spans,
+        preserving the original "displacement per second" meaning at any
+        sampling rate.
+        """
         st = self.tracks.get(tid)
-        if not st or len(st["move"]) < 3:
+        if not st or len(st["move"]) < 2:
             return False
-        horizon = self._fidx - self.fps          # ~1 second of wall time
+        horizon = self._fidx - self.fps * config.MOVE_WINDOW_SECONDS
         win = [(f, x, y) for f, x, y in st["move"] if f >= horizon]
-        if len(win) < 3 or (win[-1][0] - win[0][0]) < self.fps * 0.3:
+        if len(win) < 2:
+            win = list(st["move"])[-2:]
+        secs = (win[-1][0] - win[0][0]) / self.fps
+        if secs < 0.2:
             return False                         # not enough history yet
         net = math.hypot(win[-1][1] - win[0][1], win[-1][2] - win[0][2])
-        return net >= max(12.0, config.MIN_MOVE_FRAC * self.h)
+        per_sec = max(12.0, config.MIN_MOVE_FRAC * self.h)
+        need = max(12.0, per_sec * min(secs, config.MOVE_WINDOW_SECONDS))
+        return net >= need
 
     # ------------------------------------------------------------------ zones
     @staticmethod
@@ -319,7 +339,12 @@ class ViolationEngine:
             # --- Illegal parking (stationary far too long to be traffic)
             if config.ENABLE["illegal_parking"] and "park" not in st["emitted"]:
                 park_secs = self._parked_seconds(tid, frame_idx, signal)
+                # Require a well-observed track before accusing anyone of
+                # parking: a vehicle seen only a handful of times has no
+                # motion history worth trusting, and "no evidence of movement"
+                # must never be mistaken for evidence of stillness.
                 if (park_secs >= config.ILLEGAL_PARK_SECONDS and conf_ok
+                        and len(st["move"]) >= config.PARK_MIN_OBSERVATIONS
                         and self._in_no_parking_zone(v["box"])):
                     st["emitted"].add("park")
                     ev = self._event("Illegal Parking", tid, v["box"],
