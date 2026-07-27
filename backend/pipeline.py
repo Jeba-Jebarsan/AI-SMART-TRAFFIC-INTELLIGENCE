@@ -122,6 +122,30 @@ def save_calibration(key, points, target_m, direction=None):
                                        encoding="utf-8")
 
 
+def load_stop_line_x(video_path=None, frame_w=None, frame_h=None):
+    """Per-camera VERTICAL stop line (0-1 of frame width), or None.
+
+    For cameras that watch a junction from the side, where vehicles cross the
+    line sideways rather than moving away from or toward the lens.
+    """
+    entries = {}
+    try:
+        entries = json.loads(config.CALIBRATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    keys = []
+    if video_path:
+        import os
+        keys.append(os.path.basename(str(video_path)))
+    if frame_w and frame_h:
+        keys.append(f"{int(frame_w)}x{int(frame_h)}")
+    for k in keys:
+        e = entries.get(k) or {}
+        if e.get("stop_line_x"):
+            return float(e["stop_line_x"])
+    return None
+
+
 def load_stop_line_y(video_path=None, frame_w=None, frame_h=None):
     """Per-camera virtual stop line (0-1 of frame height), or None.
 

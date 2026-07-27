@@ -93,6 +93,9 @@ def main():
     sly = pipeline.load_stop_line_y(path, src_w, src_h)
     if sly:
         engine.stop_line_y = sly * H
+    slx = pipeline.load_stop_line_x(path, src_w, src_h)
+    if slx:
+        engine.stop_line_x = slx * W
     db.init_db()
     db.clear()
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)

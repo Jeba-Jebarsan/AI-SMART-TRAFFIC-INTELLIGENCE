@@ -38,6 +38,11 @@ class ViolationEngine:
         self.h = frame_h
         self.fps = max(float(fps), 1.0)
         self.stop_line_y = config.STOP_LINE_Y * frame_h
+        # A camera looking ALONG the road sees vehicles cross a horizontal
+        # stop line downward. A camera looking ACROSS a junction sees them
+        # cross a vertical line sideways, in either direction. Set
+        # stop_line_x (pixels) for that geometry and it is used instead.
+        self.stop_line_x = None
         # Wrong-way needs a per-camera allowed direction (set via the
         # calibration tool). None -> wrong-way stays off (honest default).
         self.allowed_dir = allowed_direction
@@ -312,8 +317,15 @@ class ViolationEngine:
             if (config.ENABLE["red_light"] and signal == "RED" and self.red_armed
                     and conf_ok and len(st["cent"]) >= 2
                     and "red" not in st["emitted"] and self.is_moving(tid)):
-                prev_y = st["cent"][-2][2]
-                if prev_y < self.stop_line_y <= cy:
+                prev_x, prev_y = st["cent"][-2][1], st["cent"][-2][2]
+                if self.stop_line_x is not None:
+                    # Sideways junction view: count a crossing in EITHER
+                    # direction, since both carriageways face the camera.
+                    crossed = ((prev_x < self.stop_line_x <= cx)
+                               or (prev_x > self.stop_line_x >= cx))
+                else:
+                    crossed = prev_y < self.stop_line_y <= cy
+                if crossed:
                     st["emitted"].add("red")
                     new.append(self._event("Red Light Jump", tid, v["box"],
                                            frame_idx, ts))

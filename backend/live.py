@@ -255,6 +255,10 @@ class LiveProcessor:
                 self.source if self.is_file else None, src_w, src_h)
             if sly:
                 engine.stop_line_y = sly * H
+            slx = pipeline.load_stop_line_x(
+                self.source if self.is_file else None, src_w, src_h)
+            if slx:
+                engine.stop_line_x = slx * W
             self._engine = engine
 
             db.init_db()

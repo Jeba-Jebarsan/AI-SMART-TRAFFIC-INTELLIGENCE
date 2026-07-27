@@ -101,5 +101,9 @@
   "redlight_cctv.mp4": {
     "stop_line_y": 0.8,
     "pixels_per_meter": 26
+  },
+  "red_light_jump.mp4": {
+    "stop_line_x": 0.5,
+    "pixels_per_meter": 22
   }
 }

@@ -67,6 +67,12 @@ def main():
     engine = ViolationEngine(
         W, H, fps, transform_fn=pipeline.make_transform_fn(cal_pts, cal_target),
         allowed_direction=cal_dir, ppm=ppm)
+    sly = pipeline.load_stop_line_y(path, sw, sh)
+    if sly:
+        engine.stop_line_y = sly * H
+    slx = pipeline.load_stop_line_x(path, sw, sh)
+    if slx:
+        engine.stop_line_x = slx * W
     db.init_db()
     db.clear()
     for snap in config.SNAPSHOT_DIR.glob("*.jpg"):
