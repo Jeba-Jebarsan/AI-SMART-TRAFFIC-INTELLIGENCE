@@ -102,7 +102,15 @@ TRACK_CONF = 0.30        # min det confidence fed into ByteTrack
 CONF = {
     "vehicle": 0.35,     # a vehicle counts toward violations at this conf
     "moto_rider": 0.45,  # motorcycle conf required before helmet analysis
-    "person": 0.40,      # person conf required to count as a rider
+    "person": 0.40,      # person conf required generally
+    # Riders on a motorcycle heavily occlude each other — a pillion passenger
+    # is half-hidden behind the rider, and a third rider almost entirely so.
+    # At 0.40 they simply were not detected, so a 3-up bike counted as 1 or 2
+    # riders and Triple Riding could never fire (measured on real footage:
+    # riders=1 on 190 bikes, riders=2 on 6, riders=3 on none). Association
+    # uses this lower bar; the geometric on-board gates, motion gate and
+    # multi-frame persistence are what actually exclude bystanders.
+    "rider_person": 0.25,
     "light": 0.45,       # traffic-light conf required to read signal colour
     "no_helmet": 0.50,   # helmet-model 'Without Helmet' must be this sure
     # Claiming a rider IS compliant needs to be at least as certain as

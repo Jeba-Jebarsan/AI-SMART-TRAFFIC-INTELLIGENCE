@@ -284,6 +284,10 @@
         <button class="btn ghost tiny" id="calibrate" title="Click 4 road points on the LIVE camera (or a sample clip) to enable real speed measurement + wrong-way direction">🎯 Speed setup</button>
       </div>
       <div class="uprow">
+        <input type="file" id="imgfile" accept="image/*" style="display:none">
+        <button class="btn ghost" id="imgbtn" title="Analyse a single photograph. Appearance-based rules only (helmet, triple riding, seatbelt, phone) — a still image cannot establish speed, red-light running or parking duration.">🖼 Analyse image</button>
+      </div>
+      <div class="uprow">
         <span id="progtxt" style="font-size:12px;color:var(--muted);flex:1"></span>
         <button class="btn tiny ghost" id="clearall">🗑 Clear</button>
       </div>
@@ -1021,6 +1025,27 @@ async function startLive(source,label){
     known.clear();showLive(true);await refresh();liveWatch();
   }catch(e){toast("Live failed: "+e.message);}
 }
+/* single-image analysis: appearance-based rules only */
+$("#imgbtn").onclick=()=>$("#imgfile").click();
+$("#imgfile").onchange=async(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  toast("Analysing image…");
+  try{
+    const fd=new FormData(); fd.append("file",f);
+    const r=await fetch(API+"/api/analyze-image",{method:"POST",body:fd});
+    if(!r.ok){toast("Image analysis failed");return;}
+    const j=await r.json();
+    const img=$("#liveimg");
+    $("#vidph").style.display="none";
+    img.src=API+j.annotated+"?t="+Date.now(); img.style.display="block";
+    $("#vidtag").textContent="single image analysis";
+    toast(j.count? `${j.count} violation(s): `+j.violations.map(v=>v.type).join(", ")
+                 : "No appearance-based violations found in this image");
+    await refresh();
+  }catch(err){toast("Failed: "+err.message);}
+  e.target.value="";
+};
+
 $("#golive").onclick=()=>startLive($("#camsrc").value.trim()||"0","live camera");
 $("#playLive").onclick=()=>{
   const name=$("#sample").value;

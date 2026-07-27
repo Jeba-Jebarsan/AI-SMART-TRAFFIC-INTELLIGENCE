@@ -22,7 +22,7 @@ import alerts
 import config
 import db
 import ocr
-from challan import make_challan_id
+from challan import fine_for, make_challan_id
 from detection import load, load_seatbelt, load_threewheeler, resolve_device
 from location import resolve_location
 from violations import ViolationEngine, centroid
@@ -926,6 +926,106 @@ TRACK_CLASSES = list(config.VEHICLE_CLASSES |
                       config.COCO["cell phone"]})
 
 
+def analyse_image(frame, location=None, seq_base=0):
+    """Analyse ONE still image and log any appearance-based violations.
+
+    Video rules are gated on movement and multi-frame persistence, which a
+    single photograph cannot provide. The rules applied here are the ones that
+    are judged purely from appearance — no helmet, three-up riding, no
+    seatbelt, phone in hand — so a still is sufficient evidence for them.
+    Rules that are inherently temporal (speeding, red-light running, wrong
+    way, parking duration, driving hours) are NOT evaluated: nothing in one
+    frame could establish them.
+
+    Violations are recorded with source "image" so they remain
+    distinguishable from live detections. Returns (annotated, rows).
+    """
+    import cv2
+    from ultralytics import YOLO   # noqa: F401  (model already loaded below)
+
+    model, helmet_model = load()
+    seatbelt_model = load_seatbelt()
+    device = resolve_device()
+
+    h, w = frame.shape[:2]
+    if w < 1100:                      # give the models enough pixels to judge
+        s = 1100.0 / w
+        frame = cv2.resize(frame, None, fx=s, fy=s, interpolation=cv2.INTER_CUBIC)
+        h, w = frame.shape[:2]
+
+    state = new_run_state(25.0, seq_base=seq_base, frame_w=w, every=1)
+    state["location"] = location or config.CAMERA_LOCATION
+    engine = ViolationEngine(w, h, 25.0)
+
+    res = model.predict(frame, conf=config.TRACK_CONF, classes=TRACK_CLASSES,
+                        imgsz=state["imgsz"], device=device, verbose=False)[0]
+    vehicles, persons, motos, cars, phones = [], [], [], [], []
+    for i, b in enumerate(res.boxes or []):
+        cls, conf = int(b.cls[0]), float(b.conf[0])
+        box = [float(x) for x in b.xyxy[0].tolist()]
+        if cls in config.VEHICLE_CLASSES:
+            vehicles.append({"track_id": i + 1, "cls": cls, "conf": conf, "box": box})
+            if cls == config.COCO["motorcycle"] and conf >= config.CONF["moto_rider"]:
+                motos.append({"track_id": i + 1, "box": box})
+            elif cls in config.SEATBELT_CLASSES and conf >= config.CONF["vehicle"]:
+                cars.append({"track_id": i + 1, "box": box})
+        elif cls == config.COCO["person"] and conf >= config.CONF["rider_person"]:
+            persons.append({"track_id": i + 1, "box": box})
+        elif cls == config.COCO["cell phone"] and conf >= config.CONF["phone"]:
+            phones.append(box)
+
+    riders = build_riders(frame, motos, persons, helmet_model)
+    belts = build_seatbelt_status(frame, cars, seatbelt_model)
+    phone_status = build_phone_status(motos, cars, persons, phones)
+
+    ts = datetime.datetime.now().isoformat(timespec="seconds")
+
+    def _mk(vtype, tid, box):
+        return {"type": vtype, "track_id": tid, "box": box, "timestamp": ts,
+                "fine": fine_for(vtype)}
+
+    events = []
+    for r in riders:
+        if r["riders"] >= 1 and r["no_helmet"] and config.ENABLE["no_helmet"]:
+            events.append(_mk("No Helmet", r["track_id"], r["box"]))
+        if r["riders"] >= 3 and config.ENABLE["triple_riding"]:
+            events.append(_mk("Triple Riding", r["track_id"], r["box"]))
+    for b in belts:
+        if b.get("no_seatbelt") and config.ENABLE["no_seatbelt"]:
+            events.append(_mk("No Seatbelt", b["track_id"], b["box"]))
+    for p in phone_status:
+        if p.get("phone") and config.ENABLE["phone_use"]:
+            events.append(_mk("Mobile Phone Use", p["track_id"], p["box"]))
+
+    _anpr_step(frame, vehicles, state, engine, 0)
+    annotated = _draw(frame, vehicles, riders, [], "UNKNOWN", engine,
+                      [e["track_id"] for e in events], state, 0,
+                      speeds=None, belts=belts, phones=phone_status)
+
+    rows = []
+    for ev in events:
+        state["seq"] += 1
+        plate, pconf, pimg = _best_plate(state, ev["track_id"], frame, ev["box"])
+        snap = _save_snapshot(frame, ev, state["seq"], plate=plate,
+                              location=state["location"])
+        row = {
+            "challan_id": make_challan_id(state["seq"]),
+            "track_id": ev["track_id"], "type": ev["type"],
+            "plate": plate, "plate_conf": round(pconf, 3), "plate_img": pimg,
+            "speed_kmph": None, "drive_seconds": None, "fine": ev["fine"],
+            "timestamp": ev["timestamp"], "frame_index": 0, "video_s": 0.0,
+            "box": json.dumps([round(c, 1) for c in ev["box"]]),
+            "snapshot": snap,
+            "location": state["location"],
+            "status": "PENDING",
+            "source": "image",
+        }
+        db.insert_violation(row)
+        alerts.notify_async(row)
+        rows.append(row)
+    return annotated, rows
+
+
 def new_run_state(fps, seq_base=0, frame_w=None, every=1):
     """Mutable per-run state shared by file processing and live mode."""
     # Don't upscale small footage: a 640px clip gains nothing at imgsz 960
@@ -1117,7 +1217,11 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state,
                         and conf >= config.CONF["vehicle"]):
                     cars.append({"track_id": tid, "box": box})
             elif cls == config.COCO["person"]:
-                if conf >= config.CONF["person"]:
+                # Lower bar than CONF["person"]: these persons are used only
+                # for motorcycle-rider association and phone attribution, and
+                # both apply strict geometric gates afterwards. Occluded
+                # pillion riders never cleared the higher threshold.
+                if conf >= config.CONF["rider_person"]:
                     persons.append({"track_id": tid, "box": box})
             elif cls == config.COCO["traffic light"]:
                 # Only the signal head governing the policed approach. A

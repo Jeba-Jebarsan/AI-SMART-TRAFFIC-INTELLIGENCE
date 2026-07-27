@@ -11,7 +11,7 @@ import os
 import time
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -262,6 +262,38 @@ def api_live_stop():
 @app.get("/api/live/status")
 def api_live_status():
     return live_mod.LIVE.state_dict()
+
+
+@app.post("/api/analyze-image")
+async def api_analyze_image(file: UploadFile = File(...)):
+    """Analyse ONE uploaded photograph and log the violations it shows.
+
+    Only appearance-based rules are applied (helmet, three-up riding,
+    seatbelt, phone) — a still cannot establish speed, red-light running or
+    parking duration. Results are stored with source "image" so they stay
+    distinguishable from live camera detections.
+    """
+    import cv2
+    import numpy as np
+    import pipeline            # lazy: keeps the ML stack out of module import
+
+    raw = await file.read()
+    img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        raise HTTPException(status_code=400, detail="not a readable image")
+
+    db.init_db()
+    seq = db.violation_count()
+    annotated, rows = pipeline.analyse_image(img, seq_base=seq)
+    name = f"image_{seq + 1}.jpg"
+    out = config.SNAPSHOT_DIR / name
+    cv2.imwrite(str(out), annotated, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    db.set_meta("data_source", "ai")
+    return {"violations": [{"type": r["type"], "challan_id": r["challan_id"],
+                            "plate": r["plate"], "fine": r["fine"]}
+                           for r in rows],
+            "count": len(rows),
+            "annotated": f"/media/snapshots/{name}"}
 
 
 @app.get("/api/live.mjpg")
