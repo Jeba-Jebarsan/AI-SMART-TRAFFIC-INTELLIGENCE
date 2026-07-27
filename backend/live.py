@@ -280,6 +280,13 @@ class LiveProcessor:
             state = pipeline.new_run_state(fps, seq_base=0, frame_w=W,
                                            every=self.every)
             state["speed_quad"] = cal_pts
+            _roi, _zone = pipeline.load_signal_setup(
+                self.source if self.is_file else None, src_w, src_h)
+            if _roi:
+                state["signal_roi"] = [_roi[0] * W, _roi[1] * H,
+                                       _roi[2] * W, _roi[3] * H]
+            if _zone:
+                engine.red_light_zone = [[x * W, y * H] for x, y in _zone]
             self._state = state
             from location import resolve_location
             state["location"] = resolve_location(

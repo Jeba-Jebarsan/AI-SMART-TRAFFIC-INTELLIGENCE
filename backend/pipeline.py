@@ -229,6 +229,40 @@ def make_transform_fn(points=None, target_m=None):
     return fn
 
 
+def _in_signal_roi(box, state):
+    """True when a detected traffic light is the one we are policing.
+
+    state["signal_roi"] is (x1, y1, x2, y2) in PIXELS. None = accept any light,
+    which is only correct where a single signal governs all traffic in view.
+    """
+    roi = (state or {}).get("signal_roi")
+    if not roi:
+        return True
+    cx = (box[0] + box[2]) / 2.0
+    cy = (box[1] + box[3]) / 2.0
+    return roi[0] <= cx <= roi[2] and roi[1] <= cy <= roi[3]
+
+
+def load_signal_setup(video_path=None, frame_w=None, frame_h=None):
+    """Per-camera (signal_roi, red_light_zone) in FRACTIONS, or (None, None)."""
+    entries = {}
+    try:
+        entries = json.loads(config.CALIBRATION_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        return None, None
+    keys = []
+    if video_path:
+        import os
+        keys.append(os.path.basename(str(video_path)))
+    if frame_w and frame_h:
+        keys.append(f"{int(frame_w)}x{int(frame_h)}")
+    for k in keys:
+        e = entries.get(k) or {}
+        if e.get("signal_roi") or e.get("red_light_zone"):
+            return e.get("signal_roi"), e.get("red_light_zone")
+    return config.SIGNAL_ROI, config.RED_LIGHT_ZONE
+
+
 def detect_signal_color(frame, light_boxes):
     """Classify the dominant colour of detected traffic-light boxes via HSV."""
     import cv2
@@ -1086,7 +1120,10 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state,
                 if conf >= config.CONF["person"]:
                     persons.append({"track_id": tid, "box": box})
             elif cls == config.COCO["traffic light"]:
-                if conf >= config.CONF["light"]:
+                # Only the signal head governing the policed approach. A
+                # junction has several facing different ways, and reading the
+                # wrong one fines drivers who had a green.
+                if conf >= config.CONF["light"] and _in_signal_roi(box, state):
                     lights.append(box)
             elif cls == config.COCO["cell phone"]:
                 if conf >= config.CONF["phone"]:

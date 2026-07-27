@@ -43,6 +43,10 @@ class ViolationEngine:
         # cross a vertical line sideways, in either direction. Set
         # stop_line_x (pixels) for that geometry and it is used instead.
         self.stop_line_x = None
+        # Lane region this camera's signal actually governs, in PIXELS.
+        # None = the whole frame, only valid where one signal governs all
+        # traffic in view. See config.RED_LIGHT_ZONE.
+        self.red_light_zone = None
         # Wrong-way needs a per-camera allowed direction (set via the
         # calibration tool). None -> wrong-way stays off (honest default).
         self.allowed_dir = allowed_direction
@@ -314,9 +318,13 @@ class ViolationEngine:
 
             # --- Red-light: centroid crosses the stop line downward while RED
             # (signal read RED repeatedly + the vehicle is genuinely moving)
+            # Only vehicles in the lane the signal governs. Without this a
+            # junction's other approaches — which have a GREEN of their own —
+            # get fined off a red that was never theirs.
             if (config.ENABLE["red_light"] and signal == "RED" and self.red_armed
                     and conf_ok and len(st["cent"]) >= 2
-                    and "red" not in st["emitted"] and self.is_moving(tid)):
+                    and "red" not in st["emitted"] and self.is_moving(tid)
+                    and self._in_zone(v["box"], self.red_light_zone)):
                 prev_x, prev_y = st["cent"][-2][1], st["cent"][-2][2]
                 if self.stop_line_x is not None:
                     # Sideways junction view: count a crossing in EITHER

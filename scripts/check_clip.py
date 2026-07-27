@@ -96,10 +96,15 @@ def main():
     slx = pipeline.load_stop_line_x(path, src_w, src_h)
     if slx:
         engine.stop_line_x = slx * W
+    roi, zone = pipeline.load_signal_setup(path, src_w, src_h)
+    if zone:
+        engine.red_light_zone = [[x * W, y * H] for x, y in zone]
     db.init_db()
     db.clear()
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)
     state["speed_quad"] = cal_pts
+    if roi:
+        state["signal_roi"] = [roi[0] * W, roi[1] * H, roi[2] * W, roi[3] * H]
     state["location"] = "clip-check"
 
     seen = collections.Counter()

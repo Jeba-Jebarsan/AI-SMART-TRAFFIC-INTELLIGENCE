@@ -82,6 +82,11 @@ def main():
             pass
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)
     state["speed_quad"] = cal_pts
+    roi, zone = pipeline.load_signal_setup(path, sw, sh)
+    if roi:
+        state["signal_roi"] = [roi[0] * W, roi[1] * H, roi[2] * W, roi[3] * H]
+    if zone:
+        engine.red_light_zone = [[x * W, y * H] for x, y in zone]
     state["location"] = config.CAMERA_LOCATION
 
     saved = 0

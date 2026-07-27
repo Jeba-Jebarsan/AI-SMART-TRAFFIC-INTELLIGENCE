@@ -333,6 +333,19 @@ STOP_LINE_Y = 0.55
 #     whose signal genuinely can't be read by the model. Use sparingly.
 FORCE_SIGNAL = None
 
+# A junction carries several signal heads facing different approaches. Reading
+# "a red light" anywhere in frame and applying it to any vehicle is invalid —
+# it fines drivers who have a green for their own lane. Both of these are
+# per-camera and set in calibration.json:
+#   signal_roi     [x1,y1,x2,y2] fractions — read ONLY lights inside this box,
+#                  i.e. the head that governs the approach being policed.
+#   red_light_zone [[x,y],...] fractions — judge ONLY vehicles inside this
+#                  lane region against that signal.
+# With neither set, red-light detection is limited to cameras where a single
+# signal governs everything in view.
+SIGNAL_ROI = None
+RED_LIGHT_ZONE = None
+
 # ----------------------------------------------------------------------------
 # Speed estimation (approximate, pixel-based)
 # ----------------------------------------------------------------------------
