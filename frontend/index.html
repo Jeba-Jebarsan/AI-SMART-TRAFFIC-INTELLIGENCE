@@ -1029,11 +1029,19 @@ async function startLive(source,label){
 $("#imgbtn").onclick=()=>$("#imgfile").click();
 $("#imgfile").onchange=async(e)=>{
   const f=e.target.files[0]; if(!f) return;
-  toast("Analysing image…");
+  // The first analysis loads YOLO + helmet + seatbelt + OCR, which can take
+  // 30-60s on CPU. Say so, or it looks like a hang.
+  toast("Analysing image… (first run loads the AI models, ~30s)");
+  $("#imgbtn").disabled=true;
   try{
     const fd=new FormData(); fd.append("file",f);
     const r=await fetch(API+"/api/analyze-image",{method:"POST",body:fd});
-    if(!r.ok){toast("Image analysis failed");return;}
+    if(!r.ok){
+      let detail="";
+      try{ detail=(await r.json()).detail||""; }catch(_){ detail=await r.text(); }
+      toast("Image analysis failed ("+r.status+") "+String(detail).slice(0,120));
+      return;
+    }
     const j=await r.json();
     const img=$("#liveimg");
     $("#vidph").style.display="none";
@@ -1043,7 +1051,7 @@ $("#imgfile").onchange=async(e)=>{
                  : "No appearance-based violations found in this image");
     await refresh();
   }catch(err){toast("Failed: "+err.message);}
-  e.target.value="";
+  finally{ $("#imgbtn").disabled=false; e.target.value=""; }
 };
 
 $("#golive").onclick=()=>startLive($("#camsrc").value.trim()||"0","live camera");
