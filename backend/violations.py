@@ -37,7 +37,10 @@ class ViolationEngine:
         self.w = frame_w
         self.h = frame_h
         self.fps = max(float(fps), 1.0)
-        self.stop_line_y = config.STOP_LINE_Y * frame_h
+        # None until this camera is actually calibrated. Red Light Jump then
+        # cannot fire and no line is drawn — see config.STOP_LINE_Y.
+        self.stop_line_y = (config.STOP_LINE_Y * frame_h
+                            if config.STOP_LINE_Y is not None else None)
         # A camera looking ALONG the road sees vehicles cross a horizontal
         # stop line downward. A camera looking ACROSS a junction sees them
         # cross a vertical line sideways, in either direction. Set
@@ -331,8 +334,12 @@ class ViolationEngine:
                     # direction, since both carriageways face the camera.
                     crossed = ((prev_x < self.stop_line_x <= cx)
                                or (prev_x > self.stop_line_x >= cx))
-                else:
+                elif self.stop_line_y is not None:
                     crossed = prev_y < self.stop_line_y <= cy
+                else:
+                    # No stop line calibrated for this camera: we do not know
+                    # where the line legally sits, so nothing can cross it.
+                    crossed = False
                 if crossed:
                     st["emitted"].add("red")
                     new.append(self._event("Red Light Jump", tid, v["box"],

@@ -23,7 +23,8 @@ import config
 import db
 import ocr
 from challan import fine_for, make_challan_id
-from detection import load, load_seatbelt, load_threewheeler, resolve_device
+from detection import (load, load_seatbelt, load_threewheeler,
+                       resolve_device, seatbelt_verdict)
 from location import resolve_location
 from violations import ViolationEngine, centroid
 
@@ -434,15 +435,15 @@ def build_seatbelt_status(frame, cars, seatbelt_model):
         r = seatbelt_model.predict(crop, verbose=False, conf=0.30,
                                    device=resolve_device())[0]
         no_belt, belt_ok = False, False
-        names = r.names
-        if r.boxes is not None:
-            for b in r.boxes:
-                label = names[int(b.cls[0])]
-                conf = float(b.conf[0])
-                if _is_no_seatbelt(label) and conf >= config.CONF["no_seatbelt"]:
-                    no_belt = True
-                elif _is_seatbelt(label) and conf >= 0.35:
-                    belt_ok = True
+        # seatbelt_verdict handles BOTH detect-task and classify-task weights.
+        # Reading r.boxes alone meant a classifier returned nothing and the
+        # rule silently never fired.
+        label, conf = seatbelt_verdict(r)
+        if label:
+            if _is_no_seatbelt(label) and conf >= config.CONF["no_seatbelt"]:
+                no_belt = True
+            elif _is_seatbelt(label) and conf >= 0.35:
+                belt_ok = True
         if belt_ok and no_belt:
             belt_ok = False        # conservative: trust the violation signal
         out.append({"track_id": c["track_id"], "box": c["box"],
@@ -734,9 +735,18 @@ def _draw(frame, vehicles, riders, light_boxes, signal, engine, active_ids,
     # Stop line + signal are drawn ONLY when a real traffic light is detected —
     # never invented on a road that has no signal.
     if has_signal:
-        y = int(engine.stop_line_y)
-        cv2.line(out, (0, y), (w, y), (0, 0, 255), 2, cv2.LINE_AA)
-        _put_tag(out, "STOP LINE", 10, y - 4, (0, 0, 255), 0.5 * sc + 0.2)
+        # Only where a stop line has actually been calibrated for this camera.
+        # Drawing the old hard-coded 0.55*height put a red "STOP LINE" across
+        # the middle of junction views, nowhere near the real line.
+        if engine.stop_line_x is not None:
+            x = int(engine.stop_line_x)
+            cv2.line(out, (x, 0), (x, h), (0, 0, 255), 2, cv2.LINE_AA)
+            _put_tag(out, "STOP LINE", min(x + 6, w - 120), 20,
+                     (0, 0, 255), 0.5 * sc + 0.2)
+        elif engine.stop_line_y is not None:
+            y = int(engine.stop_line_y)
+            cv2.line(out, (0, y), (w, y), (0, 0, 255), 2, cv2.LINE_AA)
+            _put_tag(out, "STOP LINE", 10, y - 4, (0, 0, 255), 0.5 * sc + 0.2)
         scol = {"RED": (0, 0, 255), "YELLOW": (0, 210, 255),
                 "GREEN": (0, 200, 0)}[signal]
         cv2.circle(out, (w - 30, 34), 12, scol, -1)
@@ -971,7 +981,7 @@ def analyse_image(frame, location=None, seq_base=0):
                 cars.append({"track_id": i + 1, "box": box})
         elif cls == config.COCO["person"] and conf >= config.CONF["rider_person"]:
             persons.append({"track_id": i + 1, "box": box})
-        elif cls == config.COCO["cell phone"] and conf >= config.CONF["phone"]:
+        elif cls == config.COCO["cell phone"] and conf >= config.CONF["phone_still"]:
             phones.append(box)
 
     riders = build_riders(frame, motos, persons, helmet_model)
@@ -998,6 +1008,12 @@ def analyse_image(frame, location=None, seq_base=0):
             events.append(_mk("Mobile Phone Use", p["track_id"], p["box"]))
 
     _anpr_step(frame, vehicles, state, engine, 0)
+    # The HUD reads state["violations"], which the streaming path increments as
+    # events fire. Nothing increments it here, so a still with two violations
+    # was annotated "VIOLATIONS 0" — contradicting the NO HELMET tag drawn on
+    # the same image. Set it before drawing.
+    state["vehicle_ids"].update(v["track_id"] for v in vehicles)
+    state["violations"] = len(events)
     annotated = _draw(frame, vehicles, riders, [], "UNKNOWN", engine,
                       [e["track_id"] for e in events], state, 0,
                       speeds=None, belts=belts, phones=phone_status)

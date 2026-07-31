@@ -4,8 +4,9 @@ FastAPI app: serves the dashboard + a small JSON API.
 Crucially, importing this module pulls in NONE of the ML stack. The server
 and the dashboard run with just fastapi + uvicorn installed. Only live mode
 (backed by live.py) imports the heavy pipeline, and it does so lazily inside
-a background thread — there is no file-upload / batch-analysis path, this
-platform is LIVE ONLY (IP camera, RTSP/HTTP stream, or webcam).
+a background thread. The primary mode is LIVE (IP camera, RTSP/HTTP stream or
+webcam); /api/analyze-image additionally judges a single still against the
+appearance-based rules only, and also imports the pipeline lazily.
 """
 import os
 import time
@@ -278,9 +279,31 @@ async def api_analyze_image(file: UploadFile = File(...)):
     import pipeline            # lazy: keeps the ML stack out of module import
 
     raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="empty file")
     img = cv2.imdecode(np.frombuffer(raw, np.uint8), cv2.IMREAD_COLOR)
     if img is None:
-        raise HTTPException(status_code=400, detail="not a readable image")
+        # OpenCV only decodes a handful of formats. Pillow covers the rest —
+        # and HEIC (every modern iPhone photo) needs pillow-heif on top. Fall
+        # back rather than telling the user their own photo is "not an image".
+        try:
+            import io
+
+            from PIL import Image as PILImage
+            try:
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+            except ImportError:
+                pass
+            pil = PILImage.open(io.BytesIO(raw)).convert("RGB")
+            img = np.array(pil)[:, :, ::-1].copy()      # RGB -> BGR
+        except Exception:
+            img = None
+    if img is None:
+        raise HTTPException(
+            status_code=400,
+            detail=f"could not read '{file.filename}'. Use JPG, PNG or WEBP "
+                   f"(HEIC needs: pip install pillow-heif)")
 
     db.init_db()
     seq = db.violation_count()

@@ -63,6 +63,13 @@ PLATE_MODEL = str(MODELS_DIR / "license_plate_detector.pt")
 # than no detection at all (Roboflow Universe has ready-made "seatbelt
 # detection" YOLOv8 models you can drop in here).
 SEATBELT_MODEL = str(MODELS_DIR / "seatbelt.pt")
+# A seatbelt model must LOCALISE the belt, because a challan has to point at
+# what it is accusing and a reviewer has to be able to check it. A
+# whole-crop classifier cannot, and the one currently in models/ additionally
+# fails to discriminate at all (see detection._seatbelt_model_is_sane). Such a
+# model is refused at load time and No Seatbelt simply stays off. Set True
+# only if you have a classifier you have independently validated.
+SEATBELT_ALLOW_CLASSIFIER = False
 
 # OPTIONAL drop-in three-wheeler / auto-rickshaw detector.
 #
@@ -118,7 +125,17 @@ CONF = {
     # which reads as broken to anyone looking at the screen.
     "helmet_ok": 0.55,
     "no_seatbelt": 0.50, # seatbelt-model 'No Seatbelt' must be this sure
-    "phone": 0.35,       # COCO 'cell phone' conf required to count as phone-use
+    # COCO 'cell phone' conf required to count as phone-use. Raised from 0.35
+    # after a measured false positive: on footage of a driver slumped ASLEEP
+    # over the wheel, YOLO reported a "cell phone" at 0.363 on a dark patch of
+    # the steering column and the system tagged her ON PHONE. Genuine
+    # phone-in-hand detections on the same models measure 0.55-0.75, so this
+    # bar separates them cleanly.
+    "phone": 0.50,
+    # A still has no persistence gate behind it — one marginal detection would
+    # convict on its own, where the streaming path needs PHONE_MIN_HITS frames
+    # of agreement. Single images therefore demand more confidence.
+    "phone_still": 0.60,
 }
 
 # ----------------------------------------------------------------------------
@@ -330,8 +347,16 @@ VIOLATION_META = {
 # ----------------------------------------------------------------------------
 # Virtual stop line as a fraction of frame height (0 = top, 1 = bottom).
 # A vehicle whose centroid crosses this line downward while the signal is RED
-# is flagged. Adjust to match where the stop line is in YOUR clip.
-STOP_LINE_Y = 0.55
+# is flagged.
+#
+# None (default, HONEST) => this camera has NO stop line until one is
+# calibrated for it (a "stop_line_y" / "stop_line_x" entry in
+# data/calibration.json). A hard-coded 0.55 was drawing a red "STOP LINE"
+# across the middle of every feed, in a place that was almost never the real
+# stop line — on a junction camera it landed mid-intersection. Guessing where
+# the law's line sits is exactly the kind of invention this system refuses to
+# do everywhere else, and it looked wrong to anyone who knows the junction.
+STOP_LINE_Y = None
 
 # Signal state source:
 #   * None (default, HONEST) => state comes ONLY from a YOLO-detected traffic
@@ -387,7 +412,14 @@ PIXELS_PER_METER = 8.0
 # Default OFF: exact speed needs a perspective calibration (the 🎯 tool / a
 # calibration.json entry), so an uncalibrated camera shows NO speed rather than
 # a misleading/"random" number. Set True to display approximate (~) speeds.
-SPEED_APPROX = True
+# Measured consequence of leaving this True: an uncalibrated junction camera
+# displayed "~62 km/h" on a car waiting at the lights and "~155 km/h" on a car
+# crossing an intersection, because with no homography the fallback assumes a
+# flat PIXELS_PER_METER across a perspective view. Those numbers are not
+# approximations, they are meaningless — and every other rule in this system
+# refuses to show a number it cannot defend. Speed now appears only where the
+# camera has a real perspective calibration.
+SPEED_APPROX = False
 SPEED_EMA_ALPHA = 0.4        # weight on the newest reading when smoothing (0..1)
 SPEED_MIN_R2 = 0.55          # min linearity (R^2) of motion required to TRUST a speed
 SPEED_OUTLIER_SIGMA = 2.0    # drop position samples > N*std off the fitted line

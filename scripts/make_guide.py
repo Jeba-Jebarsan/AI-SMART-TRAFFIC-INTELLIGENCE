@@ -22,13 +22,17 @@ def main():
 
     s = [Spacer(1, 18 * mm),
          P("Presentation Run-Sheet", "title"),
-         P("Startup Innovation Competition 2026  |  28 July, 7.30 PM  |  "
-           "Microsoft Teams  |  30 minutes", "sub"),
+         P("Startup Innovation Competition 2026 - Final  |  Saturday 1 August, "
+           "8.30 AM<br/>Google Meet: meet.google.com/wey-ncmi-zgc  |  30 minutes  |  "
+           "Three speakers", "sub"),
          Spacer(1, 4 * mm),
+         P("This is the operations sheet - setup, timing and what to do when "
+           "something breaks. The words you actually say are in "
+           "<b>docs/SPEAKING_SCRIPTS.md</b>.", "body"),
 
          P("1. One hour before", "h1"),
          table([["Check", "Why it matters"],
-                ["Run <b>python tests/run_all.py</b>", "Expect 79 passing. Proves nothing broke"],
+                ["Run <b>python tests/run_all.py</b>", "Expect 85 passing. Proves nothing broke"],
                 ["Start the server in your OWN terminal",
                  "A server started by any other process can die mid-demo"],
                 ["Open localhost:8000, press <b>Ctrl+F5</b>",
@@ -42,41 +46,49 @@ def main():
                 ["Mains power, charger connected",
                  "On battery Windows throttles the CPU and analysis halves"],
                 ["Close Chrome tabs, OneDrive, anything heavy",
-                 "Teams encoding plus AI detection will compete for CPU"]],
+                 "Meet encoding plus AI detection will compete for CPU"]],
                [62 * mm, 90 * mm], size=8.6),
 
-         P("2. Online-specific setup (this is a Teams call)", "h1"),
-         P("&bull; Join <b>5 minutes early</b> as the invitation requires.<br/>"
-           "&bull; Share the <b>browser window</b>, not the whole desktop - cleaner and "
-           "avoids exposing notifications.<br/>"
-           "&bull; Tick <b>Include sound</b> only if you play a recording with audio.<br/>"
-           "&bull; Use a <b>wired connection</b> if you have one. Teams encoding plus AI "
-           "detection is demanding on a laptop.<br/>"
-           "&bull; Decide <b>who shares</b> and who speaks. Switching presenters mid-call "
-           "wastes time.<br/>"
-           "&bull; Everyone else stays <b>muted</b>. Unmute only for your section and Q&amp;A.<br/>"
-           "&bull; Have the deck, the dashboard and the fallback recording open <b>before</b> "
-           "you share."),
+         P("2. Google Meet setup (all three of you)", "h1"),
+         P("&bull; Join at <b>8.25 AM</b>, not 8.29. The invitation requires 5 minutes "
+           "early and it is the first thing a panel notices.<br/>"
+           "&bull; <b>One person shares for the whole session.</b> Handing the share "
+           "between three people on Meet wastes a minute every time and often fails. "
+           "Speaker 2 should share, because they drive the demo.<br/>"
+           "&bull; Share a <b>window</b> (Chrome), not the whole screen - no "
+           "notifications, no desktop icons.<br/>"
+           "&bull; Tick <b>Share tab audio</b> only if you play a recording with sound.<br/>"
+           "&bull; Put the deck in <b>presenter view on a second screen</b> if you have "
+           "one; otherwise keep the scripts printed on paper beside you, not in a "
+           "window you have to alt-tab to.<br/>"
+           "&bull; <b>Cameras on</b> for all three at the start and during Q&amp;A. "
+           "During the demo, whoever is not speaking turns their camera off to save "
+           "bandwidth.<br/>"
+           "&bull; Everyone stays <b>muted</b> except the current speaker.<br/>"
+           "&bull; Use a <b>wired connection</b> or sit next to the router. Meet "
+           "encoding plus live AI detection is demanding.<br/>"
+           "&bull; Open the deck, the dashboard and the fallback recording <b>before</b> "
+           "you share anything."),
 
-         P("3. Thirty-minute structure", "h1"),
+         P("3. Thirty-minute structure, three speakers", "h1"),
          P("They asked for problem, solution, market, innovation, business model and "
-           "scalability. Budget roughly 20 minutes presenting, 10 for Q&amp;A."),
-         table([["Time", "Section", "Slides"],
-                ["0:00-2:00", "Introduce the team and the problem", "1-2"],
-                ["2:00-4:00", "The opportunity - cameras already exist", "3"],
-                ["4:00-6:00", "The solution and the nine violations", "4-5"],
-                ["6:00-13:00", "<b>LIVE DEMO</b> - the heart of the pitch", "switch to dashboard"],
-                ["13:00-15:00", "Innovation, and why it can be trusted", "9-11"],
-                ["15:00-17:00", "Target users and market", "12"],
-                ["17:00-19:00", "Business model and sustainability", "13-14"],
-                ["19:00-21:00", "Deployment, scalability, roadmap", "15-16"],
-                ["21:00-22:00", "Close", "17"],
-                ["22:00-30:00", "Questions and answers", "-"]],
-               [26 * mm, 84 * mm, 42 * mm], size=8.8),
+           "scalability. Budget roughly 21 minutes presenting, 9 for Q&amp;A."),
+         table([["Time", "Section", "Slides", "Who"],
+                ["0:00-2:00", "Opening and the problem", "1-2", "Speaker 1"],
+                ["2:00-5:00", "Opportunity and the solution", "3-4", "Speaker 1"],
+                ["5:00-7:00", "How it works, capability", "5-6", "Speaker 1"],
+                ["7:00-10:00", "Proof: speed, helmet, plates", "7-11", "Speaker 2"],
+                ["10:00-14:00", "<b>LIVE DEMO</b>", "dashboard", "Speaker 2"],
+                ["14:00-16:00", "Limits, trust, rigour", "12-14", "Speaker 2"],
+                ["16:00-18:00", "Innovation and market", "15-16", "Speaker 3"],
+                ["18:00-20:00", "Business model, sustainability", "17-18", "Speaker 3"],
+                ["20:00-21:00", "Scalability and close", "19-20", "Speaker 3"],
+                ["21:00-30:00", "Questions and answers", "-", "All"]],
+               [24 * mm, 62 * mm, 32 * mm, 22 * mm], size=8.6),
          PageBreak(),
 
          P("4. The live demo, step by step", "h1"),
-         P("Seven minutes. This is what separates you from a slide deck."),
+         P("Four minutes. This is what separates you from a slide deck. The full wording is in docs/SPEAKING_SCRIPTS.md."),
          table([["Do this", "Say this"],
                 ["Play <b>sample_1080p.mp4</b>",
                  "This is a real feed through the AI. Those speeds come from surveyed "
@@ -103,9 +115,9 @@ def main():
          P("5. Numbers to have ready", "h1"),
          P("Quote these confidently - each is a measured result, not an estimate."),
          table([["Claim", "Figure"],
-                ["Automated tests passing", "79 across 7 suites"],
+                ["Automated tests passing", "85 across 7 suites"],
                 ["Speed verified", "83-163 km/h on two calibrated cameras"],
-                ["Over-speeding events found", "7 on the highway clip, 3 on the second"],
+                ["Over-speeding events found", "10 on the highway clip, 3 on the second"],
                 ["Vehicles tracked, Sri Lankan road", "150, with plates AAG 4002 and BBJ 8752 read"],
                 ["Parked-bike clip", "41 vehicles, 0 violations"],
                 ["Replay accuracy", "0.99-1.01x true speed"],
@@ -127,7 +139,7 @@ def main():
                  "barrier. Recovered fines fund expansion, and each new camera is "
                  "software only, so marginal cost falls as coverage grows."],
                 ["What is your competitive advantage?",
-                 "Most systems do one thing and produce a number. We do nine rules on "
+                 "Most systems do one thing and produce a number. We run many rules on "
                  "any existing camera and attach court-ready evidence to every fine. "
                  "The engineering that makes it refuse to guess is the moat."],
                 ["How do you scale?",
@@ -181,8 +193,12 @@ def main():
                  "Press Ctrl+F5. It is almost always a cached page."],
                 ["Server not responding",
                  "Restart it in your terminal, then Ctrl+F5. Meanwhile play the recording."],
-                ["Teams share looks laggy",
-                 "Stop sharing video, share the browser window only, and lower the clip quality"],
+                ["Meet share looks laggy",
+                 "Everyone not speaking turns their camera off, share the Chrome window "
+                 "only, and lower the clip quality"],
+                ["Screen share will not start",
+                 "Chrome needs macOS/Windows screen-recording permission. Test this "
+                 "the night before, not at 8.29"],
                 ["A violation does not appear",
                  "Do not debug on stage. Switch to the recording and continue."],
                 ["Everything is very slow",

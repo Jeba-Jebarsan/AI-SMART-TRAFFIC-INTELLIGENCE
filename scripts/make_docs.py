@@ -25,7 +25,7 @@ NAVY = colors.HexColor("#0d1b3e")
 ACCENT = colors.HexColor("#22d3ee")
 INK = colors.HexColor("#1a2233")
 MUTED = colors.HexColor("#5a6a85")
-EVENT = "Sri Lankan Students Innovation Challenge 2026"
+EVENT = "Startup Innovation Competition 2026"
 
 
 def styles(base=10.2):
@@ -70,14 +70,24 @@ def table(rows, widths, size=9.0):
     return t
 
 
-def pic(name, width_mm, cap, S):
+def pic(name, width_mm, cap, S, max_h_mm=150):
+    """Place an evidence image, capped on BOTH axes.
+
+    Phone footage is portrait, and a portrait frame scaled to the full text
+    width is taller than the printable frame — reportlab then refuses to lay
+    the page out at all. Cap the height too and let width follow.
+    """
     path = os.path.join(EV, name)
     if not os.path.exists(path):
         return []
     from PIL import Image as PILImage
     w, h = PILImage.open(path).size
     W = width_mm * mm
-    out = [Image(path, width=W, height=W * h / w)]
+    H = W * h / w
+    if H > max_h_mm * mm:
+        H = max_h_mm * mm
+        W = H * w / h
+    out = [Image(path, width=W, height=H)]
     if cap:
         out += [Spacer(1, 3), Paragraph(cap, S["cap"])]
     return out
@@ -171,9 +181,12 @@ def documentation():
                  ["helmet.pt", "Helmet / no helmet",
                   "COCO has no helmet class. Applied to each associated rider's own "
                   "head region, not the bike area."],
-                 ["yolov11s-\nseatbelt", "Seatbelt",
-                  "Drop-in model with no_seatbelt / seat_belt classes. Without it the "
-                  "rule stays off - there is no guess fallback."]],
+                 ["seatbelt.pt\n(REJECTED)", "Seatbelt",
+                  "A drop-in slot, in practice empty. The model we obtained is a "
+                  "CLASSIFIER and does not discriminate: it returns 'no_seatbelt' at "
+                  "confidence 1.000 for a belted driver AND for an empty motorway. The "
+                  "loader now refuses any seatbelt model that cannot localise what it "
+                  "accuses, so the rule stays off rather than fining every car."]],
                 [26 * mm, 26 * mm, 100 * mm], size=8.4),
           PageBreak()]
 
@@ -226,7 +239,7 @@ def documentation():
     # 6 results
     s += [P("6. Measured results", "h1"),
           table([["Test", "Recorded result"],
-                 ["Automated test suite", "79 tests passing across 7 suites"],
+                 ["Automated test suite", "85 tests passing across 7 suites"],
                  ["sample_1080p.mp4 (calibrated)", "7 Over Speeding events, speeds 83-163 km/h"],
                  ["stream.mp4 (calibrated)", "3 Over Speeding, 11 of 52 vehicles measured, max 106 km/h"],
                  ["IMG_6992.MOV (Sri Lanka)", "150 vehicles; plates AAG 4002 and BBJ 8752 read"],
@@ -237,7 +250,45 @@ def documentation():
                  ["Warm image analysis", "~2 seconds end to end"]],
                 [56 * mm, 96 * mm]),
 
-          P("7. Defects found by testing on real footage", "h1"),
+          P("7. What each rule needs from the camera", "h1"),
+          P("A recurring question is why a demonstration does not show all nine rules "
+            "firing. The answer is not that the rules are unfinished - all nine are "
+            "implemented and covered by the automated suite. It is that a rule can "
+            "only fire when the camera can physically see the evidence for it. A "
+            "side-on junction camera cannot see a driver's chest, and a hand-held "
+            "camera cannot prove a vehicle is stationary. The system reports only "
+            "what it can prove, so on unsuitable footage it correctly stays silent."),
+          table([["Rule", "What the camera must provide", "Status on our footage"],
+                 ["No Helmet", "Any view where the rider's head is visible",
+                  "Demonstrated repeatedly"],
+                 ["Triple Riding", "Riders resolvable on one motorcycle",
+                  "Demonstrated (image and video)"],
+                 ["Mobile Phone Use", "The phone visible near a rider or driver",
+                  "Demonstrated on uploaded stills"],
+                 ["Over Speeding", "Four surveyed road corners for calibration",
+                  "Demonstrated on 2 calibrated cameras, 83-163 km/h"],
+                 ["No Seatbelt", "A front view of the driver, and a model that can "
+                  "localise the belt",
+                  "Rule DISABLED - our seatbelt model failed validation (section 8). "
+                  "Road CCTV also cannot see a driver's chest; fleet cameras can"],
+                 ["Illegal Parking", "A fixed camera, so stillness is provable",
+                  "Not demonstrated - the available clip is hand-held walking "
+                  "footage, so motion compensation correctly refuses"],
+                 ["Red Light Jump", "Which signal head governs the policed lane",
+                  "Implemented with signal ROI and lane zone; needs per-junction "
+                  "calibration we cannot derive from the clip"],
+                 ["Wrong Way", "A known permitted travel direction",
+                  "Implemented; requires per-camera direction setting"],
+                 ["Driver Fatigue", "A long continuous observation of one vehicle",
+                  "Implemented; sample clips are too short"]],
+                [30 * mm, 52 * mm, 70 * mm], size=8.2),
+          P("This is a footage and calibration constraint, not a software gap. A real "
+            "deployment supplies exactly what is missing here: a fixed mounting, a "
+            "surveyed road quad, a known signal-to-lane mapping, and - for fleet "
+            "customers - an in-cab or front-facing camera.", "body"),
+          PageBreak(),
+
+          P("8. Defects found by testing on real footage", "h1"),
           P("A traffic system that issues wrong fines is worse than no system. Each "
             "defect below was found by running against real video, and each is now "
             "covered by the automated suite."),
@@ -261,18 +312,45 @@ def documentation():
                   "Require three agreeing reads"],
                  ["Triple riding never fired",
                   "Occluded pillion riders never cleared the 0.40 person threshold",
-                  "Lower bar (0.25) for rider association only"]],
+                  "Lower bar (0.25) for rider association only"],
+                 ["No Seatbelt could never fire",
+                  "The model is a classify-task network; the pipeline read only "
+                  "result.boxes, which is always None for a classifier",
+                  "Read probs or boxes - then REJECT this model, because it also "
+                  "fails to discriminate at all"],
+                 ["Meaningless speeds when uncalibrated",
+                  "A flat pixels-per-metre fallback across a perspective view showed "
+                  "~62 km/h on a car waiting at a red light",
+                  "Speed appears only where a homography calibration exists"],
+                 ["A stop line drawn where none exists",
+                  "A hard-coded 0.55 x frame height put a red STOP LINE mid-junction "
+                  "on every camera",
+                  "No stop line, and no Red Light Jump, until the camera is calibrated"],
+                 ["Sleeping driver tagged ON PHONE",
+                  "A 0.363-confidence 'cell phone' on a dark steering column cleared "
+                  "the 0.35 gate; a still has no persistence gate behind it",
+                  "Phone gate raised to 0.50, and 0.60 for single images"]],
                 [36 * mm, 62 * mm, 54 * mm], size=8.2),
           PageBreak()]
 
     # 8 evidence gallery
-    s += [P("8. Verified system output", "h1")]
+    s += [P("9. Verified system output", "h1")]
     for f, c in [("07_image_upload_triple_helmet.jpg",
                   "Single-image analysis: three riders and no helmets detected on a "
                   "CC-licensed public photograph, producing two separate challans."),
                  ("05_anpr_sri_lanka_0.jpg",
-                  "Live Sri Lankan road: 18 vehicles tracked, plate AAG 4002 read and "
-                  "confirmed, speed shown beside each vehicle ID."),
+                  "Live Sri Lankan road: mixed traffic tracked and classified - cars, "
+                  "motorcycles, a three-wheeler, a bicycle - with a helmeted rider "
+                  "correctly passed as HELMET OK. This camera is not speed-calibrated, "
+                  "so no speed is shown."),
+                 ("11_no_helmet_bystander.jpg",
+                  "Precision, not just detection: the rider is fined for no helmet, "
+                  "while the person crouching against the same motorcycle is correctly "
+                  "NOT counted as a second rider."),
+                 ("12_junction_cctv_clean.jpg",
+                  "Real junction CCTV: vehicles tracked and classified and the signal "
+                  "read as GREEN. No speed and no stop line are drawn, because this "
+                  "camera has neither calibration."),
                  ("09_highway_speed_0.jpg",
                   "Highway over-speeding evidence generated from a second calibrated "
                   "camera, showing the method is not tied to one clip.")]:
@@ -280,7 +358,7 @@ def documentation():
     s += [PageBreak()]
 
     # 9 use cases
-    s += [P("9. Use cases", "h1"),
+    s += [P("10. Use cases", "h1"),
           table([["Deployment", "What it delivers"],
                  ["Urban junction enforcement",
                   "Red-light, helmet, triple-riding and phone-use challans on existing "
@@ -302,7 +380,7 @@ def documentation():
                   "identification to target scarce police resources"]],
                 [42 * mm, 110 * mm]),
 
-          P("10. Data handling and ethics", "h1"),
+          P("11. Data handling and ethics", "h1"),
           P("Number plates identify real people, so the system is deliberately "
             "conservative. A plate is written only after three independent reads "
             "agree; anything less is stored as UNREADABLE and marked for manual "
@@ -311,7 +389,7 @@ def documentation():
             "The system records what it observed and never infers identity, intent or "
             "history beyond the plate itself."),
 
-          P("11. Known limits", "h1"),
+          P("12. Known limits", "h1"),
           P("Stated plainly, because anyone deploying this must understand them:<br/>"
             "&bull; Speed requires per-camera calibration; without it no speed is shown.<br/>"
             "&bull; Plate OCR needs roughly 40 or more pixels of plate width.<br/>"
@@ -324,7 +402,7 @@ def documentation():
             "&bull; Detection degrades at night and in heavy rain, as with any camera "
             "system."),
 
-          P("12. Roadmap", "h1"),
+          P("13. Roadmap", "h1"),
           P("Night and adverse-weather models; a vision-language model such as "
             "Moondream to resolve cases the detector currently reports as not judged; "
             "a trained three-wheeler class, since COCO has none and Sri Lankan "
@@ -383,7 +461,7 @@ def presentation():
           ["<b>Parked vehicles are never fined</b> - 41 vehicles, 0 violations.",
            "<b>Unreadable plates say UNREADABLE</b> - never invented.",
            "<b>No calibration means no speed</b>, not a guess.",
-           "<b>79 automated tests</b>, including every refusal case.",
+           "<b>85 automated tests</b>, including every refusal case.",
            "Six real false-positive defects found and fixed by testing."])
     slide("Deployment",
           ["Works with <b>existing CCTV</b>, a phone stream, or a drone.",

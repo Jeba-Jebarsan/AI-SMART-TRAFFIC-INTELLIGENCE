@@ -102,9 +102,13 @@ check("E2 parked 'triple' (mannequins) never fires", len(events) == 0)
 
 # --- F: red-light needs RED streak + moving vehicle crossing line
 # (car tracked for ~2/3s before reaching the line, like real approaches)
+# The stop line is per-camera calibration, not a global default, so set it
+# here exactly as pipeline.load_stop_line_y does for a real deployment.
+STOP_LINE_FRAC = 0.55
 eng = ViolationEngine(W, H, FPS)
+eng.stop_line_y = STOP_LINE_FRAC * H
 events = []
-y0 = config.STOP_LINE_Y * H - 160
+y0 = STOP_LINE_FRAC * H - 160
 for f in range(40):
     car = {"track_id": 7, "cls": 2, "conf": 0.9,
            "box": [600, y0 + f * 8, 720, y0 + f * 8 + 90]}
@@ -113,8 +117,21 @@ for f in range(40):
 check("F red-light jump fires once with streak+motion",
       len(events) == 1 and events[0]["type"] == "Red Light Jump")
 
+# F1b: an UNCALIBRATED camera has no stop line, so nothing can cross it.
+# Guessing the line's position fined vehicles mid-junction; refusing is right.
+eng = ViolationEngine(W, H, FPS)
+assert eng.stop_line_y is None, "engine must start with no stop line"
+events = []
+for f in range(40):
+    car = {"track_id": 71, "cls": 2, "conf": 0.9,
+           "box": [600, y0 + f * 8, 720, y0 + f * 8 + 90]}
+    sig = eng.signal_state(f, "RED")
+    events += eng.update(f, [car], sig, [])
+check("F1b uncalibrated camera never fires Red Light Jump", len(events) == 0)
+
 # F2: single-frame red flicker -> not armed -> no event
 eng = ViolationEngine(W, H, FPS)
+eng.stop_line_y = STOP_LINE_FRAC * H
 events = []
 for f in range(40):
     car = {"track_id": 8, "cls": 2, "conf": 0.9,

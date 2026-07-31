@@ -284,7 +284,11 @@
         <button class="btn ghost tiny" id="calibrate" title="Click 4 road points on the LIVE camera (or a sample clip) to enable real speed measurement + wrong-way direction">🎯 Speed setup</button>
       </div>
       <div class="uprow">
-        <input type="file" id="imgfile" accept="image/*" style="display:none">
+        <!-- accept="image/*" alone greys out HEIC/HEIF (every iPhone photo) and
+             some webp in the OS file dialog, so the user cannot even select the
+             file. List the extensions explicitly and let the backend decide. -->
+        <input type="file" id="imgfile" style="display:none"
+          accept="image/*,.jpg,.jpeg,.png,.webp,.bmp,.tif,.tiff,.heic,.heif">
         <button class="btn ghost" id="imgbtn" title="Analyse a single photograph. Appearance-based rules only (helmet, triple riding, seatbelt, phone) — a still image cannot establish speed, red-light running or parking duration.">🖼 Analyse image</button>
       </div>
       <div class="uprow">
