@@ -59,27 +59,30 @@ Your job is to make the panel **care** before they see any technology.
 Lead with the number, then make it human. Speak **slowly** for the first thirty
 seconds — that is the part everyone rushes.
 
-## Slide 1 — Title  *(keep this short — about 20 seconds)*
+## Slide 1 — Title  *(about 25 seconds)*
 
 **[Slide 1 on screen. Look at the camera, not the slide. Pause two seconds before you speak.]**
 
-> *Good morning, and thank you for having us.*
->
-> *We are Team Three Hacks. I am [your name], and with me are [name] and [name].*
->
-> *We built the AI Smart Traffic Intelligence Platform. But before I tell you what it does, I want to start with a number.*
+> *Good morning, and thank you for having us. We are Team Three Hacks.*
 
-**[Change to slide 2 now.]**
-
-## Slide 2 — The problem  *(this is your main slide — take your time)*
+**[Pause. Now slow right down — this next line is your opening.]**
 
 > ***Sri Lanka records roughly three thousand road deaths a year.***
 >
-> **[Pause. Let that number sit for two seconds.]**
+> **[Stop. Count two seconds in your head. Let the number sit.]**
 >
 > *And most of them come from violations that are simple to see. No helmet. Too much speed. Three people on one motorcycle.*
->
-> *Every one of those is the kind of thing a camera can see perfectly.*
+
+**[Change to slide 2 now.]**
+
+> 🎯 **Notice what you have NOT said yet: anything about our product.**
+> You are only describing the problem. The panel has heard six pitches that
+> open with "we built an AI platform". None of them opened with a number that
+> makes the room go quiet. Say what it does on **slide 4**, not before.
+
+## Slide 2 — The problem  *(this is your main slide — take your time)*
+
+> *Every one of those deaths is the kind of thing a camera can see perfectly.*
 >
 > *So right now, somewhere in Colombo, a man is riding to work without a helmet. He passes under a traffic camera. That camera sees him perfectly.*
 >
@@ -107,9 +110,13 @@ seconds — that is the part everyone rushes.
 >
 > *So we are not asking anyone to buy new cameras. We are putting intelligence behind the cameras this country already owns.*
 
-## Slide 4 — Our solution
+## Slide 4 — Our solution  *(NOW you name the product — and introduce your team)*
 
-> *This is what we built.*
+> *So that is what we built.*
+>
+> ***The AI Smart Traffic Intelligence Platform.***
+>
+> *I am [your name], and with me are [name] and [name].*
 >
 > *One AI system, running on an ordinary camera, that watches traffic and judges violations.*
 >
