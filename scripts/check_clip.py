@@ -100,7 +100,10 @@ def main():
     if zone:
         engine.red_light_zone = [[x * W, y * H] for x, y in zone]
     db.init_db()
-    db.clear()
+    # A read-only VET of a clip has no business destroying the operator's
+    # dashboard. It used to call db.clear() purely so its own counts started
+    # from zero — but the counts below come from `seen`, not from the database,
+    # so the wipe bought nothing and cost a real captured challan once.
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)
     state["speed_quad"] = cal_pts
     if roi:

@@ -31,6 +31,8 @@ def main():
     ap.add_argument("--frames", type=int, default=1200)
     ap.add_argument("--every", type=int, default=3)
     ap.add_argument("--prefix", default=None)
+    ap.add_argument("--keep-db", action="store_true",
+                    help="do not wipe existing violations/snapshots first")
     args = ap.parse_args()
 
     import cv2
@@ -74,12 +76,33 @@ def main():
     if slx:
         engine.stop_line_x = slx * W
     db.init_db()
-    db.clear()
-    for snap in config.SNAPSHOT_DIR.glob("*.jpg"):
-        try:
-            snap.unlink()
-        except OSError:
-            pass
+    # This script starts from a clean slate so its output is reproducible, but
+    # "clean slate" means DESTROYING whatever the user last produced. That has
+    # already cost a real Illegal Parking challan someone had captured from a
+    # live session and not yet exported. Back the evidence up before wiping,
+    # and let --keep-db skip the wipe entirely.
+    if args.keep_db:
+        print("--keep-db: leaving existing violations and snapshots in place")
+    else:
+        existing = db.all_violations(limit=100000)
+        if existing:
+            import datetime
+            import json
+            import shutil
+            stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+            bdir = config.OUTPUT_DIR / "backups" / stamp
+            (bdir / "snapshots").mkdir(parents=True, exist_ok=True)
+            (bdir / "violations.json").write_text(
+                json.dumps(existing, indent=2, default=str), encoding="utf-8")
+            for snap in config.SNAPSHOT_DIR.glob("*.jpg"):
+                shutil.copy(str(snap), str(bdir / "snapshots" / snap.name))
+            print(f"backed up {len(existing)} existing violation(s) -> {bdir}")
+        db.clear()
+        for snap in config.SNAPSHOT_DIR.glob("*.jpg"):
+            try:
+                snap.unlink()
+            except OSError:
+                pass
     state = pipeline.new_run_state(fps, seq_base=0, frame_w=W, every=args.every)
     state["speed_quad"] = cal_pts
     roi, zone = pipeline.load_signal_setup(path, sw, sh)

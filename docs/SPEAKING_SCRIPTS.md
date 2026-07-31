@@ -35,6 +35,37 @@ Saturday 1 August 2026 · 8:30 AM · Google Meet · `meet.google.com/wey-ncmi-zg
 between three people on Google Meet wastes a minute every time and often
 fails. Speaker 2 changes slides for everyone.
 
+## Slide map — what every slide is for
+
+Read this once so you know the shape of the whole deck, not just your part.
+
+| # | Slide | What is on it | The one thing it must land |
+|---|---|---|---|
+| 1 | Title | Product name, tagline, 3 stat cards | We look serious and prepared |
+| 2 | The problem | 3,000 deaths, 4 bullets | **This problem is real and it kills people** |
+| 3 | The opportunity | Two columns: what exists / what's missing | The cameras are already there |
+| 4 | Our solution | 4 bullets + the pipeline arrow | What we actually built |
+| 5 | How it works | Six numbered cards | It is engineering, not magic |
+| 6 | Capability | Nine rule cards + extensions | **It is an engine, not a fixed list** |
+| 7 | Proof: over speeding | Real challan, 134 km/h | This is real output, not a mockup |
+| 8 | Proof: speed earned | Highway frame | The number is measured, never guessed |
+| 9 | Proof: helmet + triple | Single uploaded photo, 2 challans | One photo, two fines, seconds |
+| 10 | Proof: bystander | Scooter + crouching person | **Precision — we judge, not just detect** |
+| 11 | Proof: ANPR | Sri Lankan street, plates read | Real plates on a real local road |
+| 12 | Camera view limits | 5-row table of what each rule needs | **We are honest about limits** |
+| 13 | Why trust it | 5 refusals + 3 stat cards | It refuses to guess |
+| 14 | Engineering rigour | 5 defects we found in ourselves | We tested hard enough to find our own faults |
+| 15 | What's different | Typical systems vs ours | Our moat is the refusing, not the detecting |
+| 16 | Who it's for | 3 user groups + why they buy | There is a real buyer |
+| 17 | Business model | 4 revenue lines | It makes money |
+| 18 | Sustainability | Economic / social / privacy | It lasts, and it is fair |
+| 19 | Scalability | 4-phase roadmap | There is a path from here to a city |
+| 20 | Compute roadmap | 4 hardware tiers | **Our ceiling is compute, not ideas** |
+| 21 | Close | One line + thank you | Safer roads, proven by evidence |
+
+The four in **bold** are the slides that win or lose it. If you are running out
+of time, protect those.
+
 ### Minute by minute
 
 | Time | What happens | Who |
@@ -453,6 +484,29 @@ These come from a local panel and they are the ones teams usually fumble.
 | **Why is it not analysing every frame?** | Because it is real-time. On a laptop CPU we analyse about two frames a second and drop the rest, exactly as a live camera does. A GPU edge box analyses every frame. |
 | **Can it be fooled by a covered plate?** | The violation is still recorded with photographic evidence; only the plate field says UNREADABLE, and it goes to a human for review. Deliberately obscuring a plate is itself an offence. |
 | **Is this just YOLO with a dashboard?** | YOLO tells you a motorcycle is present. It does not tell you the rider has no helmet, how fast they are going in km/h, whether they are parked, or what their plate is. Everything between detection and a defensible fine is ours. |
+
+### ⏱ "No Rest Break" — the question you WILL be asked
+
+> **"How can a camera possibly know a driver is tired?"**
+
+**It can't, and we do not claim it can.** Answer exactly like this:
+
+> *"We do not measure tiredness. We measure* ***time.***
+>
+> *The camera watches one vehicle and times how long it has driven without a proper stop. A red light or a traffic jam does not count as a stop — only a real break does. When that continuous driving time passes the legal limit, we flag it.*
+>
+> *So it is not a guess about someone's face or their eyes. It is a stopwatch on a vehicle, and it is exactly how transport authorities already write the rule — in hours of continuous driving.*
+>
+> *And that is why we call it* ***No Rest Break*** *and not "fatigue detection". Fatigue detection would be a claim we cannot defend."*
+
+**Follow-ups to be ready for:**
+
+| Question | Answer |
+|---|---|
+| **What is the time limit?** | Real driving-hour rules work in hours — Sri Lanka's commercial transport rules and the EU's 4.5-hour limit are the same order of magnitude. In our demo it is set to seconds so you can actually see it fire in a short clip. For a deployment you set it to the real legal limit. |
+| **One camera cannot follow a bus for four hours.** | Correct, and that is the honest limit of a single roadside camera. This rule is built for the fleet customer, where the camera is *in the vehicle* and sees the whole shift. On roadside cameras it is a corridor-level rule — the same plate seen at several cameras over hours. |
+| **Could you detect actual drowsiness?** | Yes, with an in-cab camera and a face model — eye closure and head nodding are well-studied. We have not built it, because we have no in-cab footage and we do not ship models we cannot validate. That is on the roadmap, not on this slide. |
+| **Is the driver identified?** | No. We track the vehicle and its plate. Who was driving is for the operator's own records. |
 
 ## Awkward questions *(whoever is asked — answer calmly)*
 
