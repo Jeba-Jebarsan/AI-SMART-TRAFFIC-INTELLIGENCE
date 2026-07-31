@@ -188,6 +188,36 @@ def documentation():
                   "loader now refuses any seatbelt model that cannot localise what it "
                   "accuses, so the rule stays off rather than fining every car."]],
                 [26 * mm, 26 * mm, 100 * mm], size=8.4),
+
+          P("3.1 Why not a bigger detector?", "h2"),
+          P("A fair question, answered by measuring rather than by reading a "
+            "leaderboard. All five detectors below ran over the same 100 analysed "
+            "frames of Sri Lankan road footage, on this laptop CPU, at imgsz 640. "
+            "What matters for our rules is not mAP but <b>riders associated with a "
+            "motorcycle</b> - with no rider there is no helmet, triple-riding or "
+            "phone judgement to make."),
+          table([["Model", "Analysis\nfps", "Bikes\nfound", "Riders\nassociated",
+                  "Rider observations per\nsecond of video"],
+                 ["yolov8n", "4.33", "65", "61", "2.64"],
+                 ["yolov8s  (in use)", "2.48", "182", "176", "4.36"],
+                 ["yolov8m", "1.16", "215", "205", "2.38"],
+                 ["yolo11s", "1.29", "164", "151", "1.95"],
+                 ["yolo11m", "0.68", "257", "232", "1.58"]],
+                [38 * mm, 18 * mm, 18 * mm, 25 * mm, 43 * mm], size=8.6),
+          P("The last column decides it. Because analysis is slower than playback, "
+            "the pipeline drops frames to stay real-time - so a slower model does "
+            "not merely cost time, it <b>sees fewer frames</b>. yolo11m finds 32% "
+            "more riders per frame than yolov8s but runs 3.6x slower, so across a "
+            "second of live video it delivers under half as many rider "
+            "observations. On this hardware yolov8s wins by a wide margin: yolov8n "
+            "is too weak to resolve riders, and everything larger is starved by "
+            "the CPU. yolo11s is the clearest trap - lower recall than yolov8s AND "
+            "half the speed."),
+          P("This ordering flips the moment there is a GPU. Frame dropping "
+            "disappears, the fps column stops mattering, and the ranking becomes "
+            "the raw recall column - where yolo11m leads. That is exactly why the "
+            "detector sits behind one swappable interface: on this project the "
+            "accuracy ceiling is compute, not architecture."),
           PageBreak()]
 
     # 4 algorithms

@@ -337,15 +337,54 @@ def main():
                               "partnership; night and rain models"),
             ("6-12 months", "Corridor deployment on GPU edge boxes; a trained "
                             "three-wheeler class for local traffic"),
-            ("Beyond", "City-wide multi-camera dashboard; vision-language models for "
-                       "ambiguous cases; export to comparable South Asian markets")]):
-        y = Inches(2.1 + i * 1.15)
-        box(s, Inches(0.9), y, Inches(2.6), Inches(0.7), phase, size=16,
+            ("Beyond", "City-wide multi-camera dashboard; export to comparable "
+                       "South Asian markets")]):
+        y = Inches(2.05 + i * 0.92)
+        box(s, Inches(0.9), y, Inches(2.6), Inches(0.7), phase, size=15,
             colour=AMBER, bold=True)
-        box(s, Inches(3.6), y, Inches(8.9), Inches(0.9), what, size=14.5, colour=INK)
-    box(s, Inches(0.9), Inches(6.8), Inches(11.6), Inches(0.5),
-        "Each camera added is software only - marginal cost falls as coverage grows.",
-        size=14, colour=ACCENT, bold=True)
+        box(s, Inches(3.6), y, Inches(8.9), Inches(0.8), what, size=13.5, colour=INK)
+    card(s, Inches(0.85), Inches(5.75), Inches(11.6), Inches(1.35))
+    box(s, Inches(1.15), Inches(5.9), Inches(11.0), Inches(0.4),
+        "The accuracy ceiling is compute, not architecture", size=15,
+        colour=ACCENT, bold=True)
+    box(s, Inches(1.15), Inches(6.32), Inches(11.0), Inches(0.7),
+        "Today we run **YOLOv8s on a laptop CPU** - chosen because it fits, not "
+        "because it is the best available. The detector is one swappable file: on "
+        "GPU hardware the same pipeline takes **YOLO11x, RT-DETR or DINO** with no "
+        "change to a single rule.", size=12.5, colour=INK)
+
+    # ------------------------------------------------- 19b  the upgrade path
+    s = S(); bg(s)
+    header(s, "What more compute buys us", "TECHNICAL ROADMAP")
+    box(s, Inches(0.8), Inches(1.8), Inches(11.6), Inches(0.5),
+        "We benchmarked five detectors on our own footage. Every rule sits on one "
+        "detector interface, so upgrading is a file swap, not a rewrite.",
+        size=14.5, colour=MUTED)
+    for i, (tier, model, gain) in enumerate([
+            ("Laptop CPU  (today)", "YOLOv8s",
+             "2.5 analysed frames/sec. We measured yolo11m finding 32% more riders "
+             "per frame - but running 3.6x slower, so it sees fewer frames and "
+             "delivers LESS. On CPU, yolov8s wins."),
+            ("GPU edge box  (pilot)", "YOLO11m / YOLO11x",
+             "Frame dropping disappears, so raw recall wins instead of speed. The "
+             "same measurement now ranks yolo11m first."),
+            ("Server GPU  (city scale)", "RT-DETR, DINO",
+             "Transformer detectors handle dense, overlapping traffic far better - "
+             "exactly our junctions at rush hour."),
+            ("Open-vocabulary  (research)", "Grounding DINO, VLMs",
+             "Describe a new violation in words instead of collecting and "
+             "labelling a dataset for it.")]):
+        y = Inches(2.4 + i * 1.15)
+        card(s, Inches(0.85), y, Inches(11.6), Inches(1.0))
+        box(s, Inches(1.1), y + Inches(0.12), Inches(3.0), Inches(0.7), tier,
+            size=13, colour=AMBER, bold=True)
+        box(s, Inches(4.2), y + Inches(0.12), Inches(2.5), Inches(0.7), model,
+            size=13, colour=ACCENT, bold=True)
+        box(s, Inches(6.8), y + Inches(0.1), Inches(5.5), Inches(0.85), gain,
+            size=11.5, colour=INK)
+    box(s, Inches(0.85), Inches(7.05), Inches(11.6), Inches(0.5),
+        "The hard part - the rules that refuse to guess - is the part that does "
+        "not need replacing.", size=14, colour=ACCENT, bold=True)
 
     # ---------------------------------------------------------- 20  close
     s = S(); bg(s); accent_bar(s)
