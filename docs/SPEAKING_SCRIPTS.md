@@ -21,12 +21,15 @@ Saturday 1 August 2026 · 8:30 AM · Google Meet · `meet.google.com/wey-ncmi-zg
 
 ## The split
 
-| Speaker | Slides | Covers | Time |
-|---|---|---|---|
-| **Speaker 1** | 1–6 | Opening, problem, opportunity, solution, how it works, capability | 7 min |
-| **Speaker 2** | 7–14 + **live demo** | All the proof, the demo, honesty about limits, engineering rigour | 9 min |
-| **Speaker 3** | 15–20 | Innovation, market, business model, sustainability, scale, close | 5 min |
-| **All three** | — | Questions and answers | 9 min |
+| Speaker | Who | Slides | Covers | Time |
+|---|---|---|---|---|
+| **Speaker 1** | **you** — `___________` | 1–6 | Opening, problem, opportunity, solution, how it works, capability | 7 min |
+| **Speaker 2** | friend ① — `___________` | 7–14 + **live demo** | All the proof, the demo, honesty about limits, engineering rigour | 9 min |
+| **Speaker 3** | friend ② — `___________` | 15–21 | Innovation, market, business model, sustainability, scale, close | 5 min |
+| **All three** | everyone | — | Questions and answers | 9 min |
+
+> ✏️ **Write your three real names into this table now**, before you send it to
+> your friends. Then each person only has to read their own section.
 
 **Speaker 2 shares the screen for the whole session.** Handing the share
 between three people on Google Meet wastes a minute every time and often
@@ -45,7 +48,7 @@ fails. Speaker 2 changes slides for everyone.
 | 14:00 | Limits, trust, rigour | Speaker 2 |
 | 16:00 | Innovation + market | Speaker 3 |
 | 18:00 | Business model + sustainability | Speaker 3 |
-| 20:00 | Scale + close | Speaker 3 |
+| 20:00 | Scale, model roadmap, close | Speaker 3 |
 | 21:00 | Q&A | All |
 
 ---
@@ -53,28 +56,38 @@ fails. Speaker 2 changes slides for everyone.
 # SPEAKER 1 — The opening (7 minutes)
 
 Your job is to make the panel **care** before they see any technology.
-Start with a person, not a product. Speak **slowly** for the first thirty
+Lead with the number, then make it human. Speak **slowly** for the first thirty
 seconds — that is the part everyone rushes.
 
-## Slide 1 — Title
+## Slide 1 — Title  *(keep this short — about 20 seconds)*
 
 **[Slide 1 on screen. Look at the camera, not the slide. Pause two seconds before you speak.]**
 
-> *Good morning. Thank you for having us.*
+> *Good morning, and thank you for having us.*
 >
-> *Somewhere in Sri Lanka this morning, a man is riding to work without a helmet. He passes under a traffic camera. That camera sees him perfectly.*
+> *We are Team Three Hacks. I am [your name], and with me are [name] and [name].*
+>
+> *We built the AI Smart Traffic Intelligence Platform. But before I tell you what it does, I want to start with a number.*
+
+**[Change to slide 2 now.]**
+
+## Slide 2 — The problem  *(this is your main slide — take your time)*
+
+> ***Sri Lanka records roughly three thousand road deaths a year.***
+>
+> **[Pause. Let that number sit for two seconds.]**
+>
+> *And most of them come from violations that are simple to see. No helmet. Too much speed. Three people on one motorcycle.*
+>
+> *Every one of those is the kind of thing a camera can see perfectly.*
+>
+> *So right now, somewhere in Colombo, a man is riding to work without a helmet. He passes under a traffic camera. That camera sees him perfectly.*
 >
 > *And nothing happens.*
 >
 > *Not because the camera failed. Because nobody was watching it.*
 >
-> *We are Team Three Hacks. I am [your name], and with me are [name] and [name]. We built the AI Smart Traffic Intelligence Platform — a system that watches those cameras when nobody else can.*
-
-## Slide 2 — The problem
-
-> *Sri Lanka loses around three thousand lives on the road every year. Most of those deaths come from things that are easy to see. No helmet. Too much speed. Three people on one motorcycle.*
->
-> *So why does it keep happening? Three reasons.*
+> *There are three reasons this keeps happening.*
 >
 > ***First, coverage.*** *A police officer cannot stand at every junction, twenty-four hours a day. Enforcement is limited by how many people we can hire.*
 >
@@ -162,7 +175,7 @@ You are the most important speaker. Slides win nothing; a working system wins.
 >
 > *One hundred and thirty-four kilometres an hour, in a sixty zone. The vehicle is boxed. The number plate is zoomed in. And the speed is stamped onto the image itself, so it cannot be separated from the evidence later.*
 >
-> *We measured seven of these events, between eighty-three and one hundred and sixty-three kilometres an hour, on two different cameras.*
+> *We measured ten of these events on this clip alone, between eighty-three and one hundred and sixty-three kilometres an hour, across two different cameras.*
 
 ## Slide 8 — Speed is measured, not guessed
 
@@ -346,7 +359,27 @@ for one thing: **does this survive outside a laptop?**
 >
 > ***Beyond that,*** *a city-wide dashboard, and export. Nothing in this software is specific to Sri Lanka. India, Bangladesh and Pakistan have the same roads and the same problem.*
 
-## Slide 20 — The close
+## Slide 20 — What more compute buys us
+
+> ⚠️ **This slide wins technical judges. Do not rush it.**
+
+> *One question we expect: why not use a bigger, more accurate AI model?*
+>
+> *We tested five of them on our own footage. And the result surprised us.*
+>
+> *The newest model, YOLO11m, found thirty-two per cent more riders in every frame than the one we use. On paper, it is clearly better.*
+>
+> *But it runs three and a half times slower. And because our system drops frames to stay real-time, a slower model does not just cost time —* ***it sees fewer frames.*** *Across one second of live video, that "better" model actually delivered less than half as many riders.*
+>
+> *So on a laptop CPU, the best model on paper is the worst model in practice.*
+>
+> *That ordering flips the moment you have a GPU. Frame dropping disappears and raw accuracy wins. Which is the real point of this slide:* ***our accuracy ceiling is compute, not architecture.***
+>
+> *The detector is one swappable file. On an edge box it becomes YOLO11x. At city scale, transformer models like RT-DETR or DINO, which handle dense overlapping traffic far better — exactly our junctions at rush hour.*
+>
+> *And the hard part — the rules that refuse to guess — is the part that does not need replacing.*
+
+## Slide 21 — The close
 
 **[Slow down. This is the last thing they hear. Look at the camera.]**
 
