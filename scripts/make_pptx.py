@@ -23,8 +23,8 @@ from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
 
 from _pptx_helpers import (ACCENT, AMBER, BG, GREEN, H, INK, MUTED, PANEL,
-                           PANEL_LINE, W, accent_bar, bg, box, card, header,
-                           picture, stat)
+                           PANEL_LINE, W, accent_bar, bg, box, card, faded_bg,
+                           header, picture, stat)
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 os.chdir(ROOT)
@@ -61,7 +61,9 @@ def main():
     S = lambda: prs.slides.add_slide(blank)   # noqa: E731
 
     # ---------------------------------------------------------- 1  title
-    s = S(); bg(s); accent_bar(s)
+    s = S(); bg(s)
+    faded_bg(s, "05_anpr_sri_lanka_0.jpg", opacity=0.17)
+    accent_bar(s)
     box(s, Inches(0.9), Inches(1.9), Inches(11.5), Inches(1.3),
         "AI Smart Traffic Intelligence Platform", size=44, colour=INK, bold=True)
     box(s, Inches(0.9), Inches(3.3), Inches(11.5), Inches(0.7),
@@ -90,7 +92,7 @@ def main():
             size=18.5)
     box(s, Inches(0.8), Inches(6.0), Inches(11.6), Inches(0.7),
         "The gap is not cameras. The gap is coverage and proof.",
-        size=20, colour=AMBER, bold=True)
+        size=20, colour=ACCENT, bold=True)
 
     # ---------------------------------------------------------- 3  opportunity
     s = S(); bg(s); header(s, "The opportunity", "WHY NOW")
@@ -104,7 +106,7 @@ def main():
              "Enforcement grows with headcount, not with technology."])
     box(s, Inches(0.8), Inches(6.5), Inches(11.6), Inches(0.6),
         "We do not need new cameras. We need intelligence behind the ones already there.",
-        size=16, colour=AMBER, bold=True, align=PP_ALIGN.CENTER)
+        size=16, colour=ACCENT, bold=True, align=PP_ALIGN.CENTER)
 
     # ---------------------------------------------------------- 4  solution
     s = S(); bg(s); header(s, "Our solution", "THE PRODUCT")
@@ -119,7 +121,7 @@ def main():
         "->  ANPR  ->  e-Challan", size=15, colour=ACCENT, bold=True)
     box(s, Inches(0.8), Inches(6.3), Inches(11.6), Inches(0.6),
         "Runs on a single laptop CPU. No new hardware to install.",
-        size=15, colour=AMBER, bold=True)
+        size=15, colour=ACCENT, bold=True)
 
     # ---------------------------------------------------------- 5  how it works
     s = S(); bg(s); header(s, "How it works, in six steps", "THE PIPELINE")
@@ -140,7 +142,7 @@ def main():
             d, size=11.5, colour=MUTED)
     box(s, Inches(0.85), Inches(6.55), Inches(11.6), Inches(0.5),
         "Every step runs live. Nothing is pre-recorded and nothing is faked.",
-        size=14, colour=AMBER, bold=True, align=PP_ALIGN.CENTER)
+        size=14, colour=ACCENT, bold=True, align=PP_ALIGN.CENTER)
 
     # ------------------------------------------------- 6  capability (extensible)
     s = S(); bg(s)
@@ -152,7 +154,7 @@ def main():
     for i, name in enumerate(["No Helmet", "Triple Riding", "Over Speeding",
                               "Red Light Jump", "Wrong Way", "No Seatbelt",
                               "Mobile Phone Use", "Illegal Parking",
-                              "Driver Fatigue"]):
+                              "No Rest Break"]):
         cx = Inches(0.8 + (i % 3) * 4.0); cy = Inches(2.5 + (i // 3) * 1.02)
         card(s, cx, cy, Inches(3.7), Inches(0.85))
         box(s, cx, cy + Inches(0.22), Inches(3.7), Inches(0.5), name,
@@ -226,7 +228,7 @@ def main():
             colour=ACCENT)
     box(s, Inches(0.85), Inches(6.9), Inches(11.6), Inches(0.5),
         "Every rule is built and tested. We demonstrate only what our footage "
-        "genuinely contains.", size=14, colour=AMBER, bold=True)
+        "genuinely contains.", size=14, colour=ACCENT, bold=True)
 
     # ---------------------------------------------------------- 13  trust
     s = S(); bg(s); header(s, "Why it can be trusted", "THE REAL DIFFERENTIATOR")
@@ -293,7 +295,7 @@ def main():
              "Fleet operators cut insurance exposure and liability."])
     box(s, Inches(0.8), Inches(6.5), Inches(11.6), Inches(0.6),
         "Entry point: a single pilot junction. Expansion: corridor, then city.",
-        size=15, colour=AMBER, bold=True, align=PP_ALIGN.CENTER)
+        size=15, colour=ACCENT, bold=True, align=PP_ALIGN.CENTER)
 
     # ---------------------------------------------------------- 17  business model
     s = S(); bg(s); header(s, "Business model", "HOW IT SUSTAINS ITSELF")
@@ -314,7 +316,7 @@ def main():
             size=13.5, colour=INK)
     box(s, Inches(0.85), Inches(6.75), Inches(11.6), Inches(0.6),
         "Cost advantage: no new cameras and no per-site hardware, so a pilot is "
-        "software and calibration only.", size=14, colour=AMBER, bold=True)
+        "software and calibration only.", size=14, colour=ACCENT, bold=True)
 
     # ---------------------------------------------------------- 18  sustainability
     s = S(); bg(s); header(s, "Sustainability", "ECONOMIC, SOCIAL, ENVIRONMENTAL")
@@ -386,15 +388,17 @@ def main():
         "The hard part - the rules that refuse to guess - is the part that does "
         "not need replacing.", size=14, colour=ACCENT, bold=True)
 
-    # ---------------------------------------------------------- 20  close
-    s = S(); bg(s); accent_bar(s)
+    # ---------------------------------------------------------- 21  close
+    s = S(); bg(s)
+    faded_bg(s, "01_over_speeding_evidence_1.jpg", opacity=0.13)
+    accent_bar(s)
     box(s, Inches(0.9), Inches(2.5), Inches(11.5), Inches(1.2),
         "Safer roads, proven by evidence.", size=42, colour=INK, bold=True)
     box(s, Inches(0.9), Inches(3.8), Inches(11.5), Inches(0.7),
         "Real speed. Verified plates. Automatic challans, with the photograph attached.",
         size=18, colour=ACCENT)
     box(s, Inches(0.9), Inches(4.7), Inches(11.5), Inches(0.6),
-        "On cameras this country already owns.", size=17, colour=AMBER, bold=True)
+        "On cameras this country already owns.", size=17, colour=ACCENT, bold=True)
     box(s, Inches(0.9), Inches(5.7), Inches(11.5), Inches(0.6),
         "Thank you. We are happy to take your questions.", size=16, colour=INK)
     box(s, Inches(0.9), Inches(6.4), Inches(11.5), Inches(0.6),

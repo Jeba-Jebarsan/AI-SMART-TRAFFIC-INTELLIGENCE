@@ -153,8 +153,14 @@ That makes nine sound like a ceiling. Say it like this:
 
 > *Now, what can it actually catch?*
 >
-> *Nine rules are live today. No helmet. Triple riding. Over speeding. Red light jumping. Wrong way. No seatbelt. Mobile phone use. Illegal parking. Driver fatigue.*
->
+> *Nine rules are live today. No helmet. Triple riding. Over speeding. Red light jumping. Wrong way. No seatbelt. Mobile phone use. Illegal parking. And no rest break — a vehicle this camera has watched drive continuously for longer than the law allows, with no qualifying stop.*
+
+⚠️ **Say "no rest break", never "driver fatigue".** We do not look at a
+driver's eyes or face — we time how long a vehicle has driven without stopping.
+If you say "fatigue detection" a technical judge will ask how you measure
+drowsiness, and you will have overclaimed. Timing is the honest word, and it is
+what the dashboard says.
+
 > *But the important word on this slide is not "nine". It is* ***engine.***
 >
 > *Underneath all nine is one shared core — detection, tracking, and road geometry. Each rule is a small module on top of that core. So when a client asks for lane discipline, or bus-lane misuse, or blocked pedestrian crossings, that is days of work, not a new product.*
@@ -326,7 +332,7 @@ for one thing: **does this survive outside a laptop?**
 >
 > ***Second, the Road Development Authority and municipal councils*** *— highway corridors, school zones, hospital zones.*
 >
-> ***Third — and this is the one that pays fastest — commercial fleet operators.*** *Bus and lorry companies. They need seatbelt and driver fatigue compliance, and they have a direct financial reason to want it: insurance and liability.*
+> ***Third — and this is the one that pays fastest — commercial fleet operators.*** *Bus and lorry companies. They need seatbelt and rest-break compliance, and they have a direct financial reason to want it: insurance and liability.*
 >
 > *We do not need to win the whole country on day one. We need one pilot junction. Then a corridor. Then a city.*
 

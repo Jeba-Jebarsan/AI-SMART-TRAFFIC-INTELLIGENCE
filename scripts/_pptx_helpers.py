@@ -86,6 +86,45 @@ def picture(slide, name, x, y, max_w, max_h):
                                     width=w, height=h)
 
 
+def faded_bg(slide, name, opacity=0.16, cache_dir=None):
+    """Full-bleed background from one of OUR OWN evidence frames, faded to near-white.
+
+    Deliberately not a stock photo: the title of a deck about a working system
+    should be the system's own output. Faded this far it reads as texture, and
+    dark title text stays legible over it.
+
+    The fade is baked into a cached JPEG rather than done with PowerPoint
+    transparency, because picture transparency needs raw XML in python-pptx and
+    renders inconsistently across PowerPoint versions.
+    """
+    src = os.path.join(EV, name)
+    if not os.path.exists(src):
+        return None
+    cache_dir = cache_dir or os.path.join(ROOT, "docs", "DEMO_EVIDENCE", "_derived")
+    os.makedirs(cache_dir, exist_ok=True)
+    out = os.path.join(cache_dir, f"bg_{int(opacity * 100)}_{name}")
+
+    if not os.path.exists(out) or os.path.getmtime(out) < os.path.getmtime(src):
+        img = PILImage.open(src).convert("RGB")
+        target = 16 / 9
+        w, h = img.size
+        if w / h > target:                      # too wide -> crop sides
+            nw = int(h * target)
+            img = img.crop(((w - nw) // 2, 0, (w - nw) // 2 + nw, h))
+        else:                                   # too tall -> crop top/bottom
+            nh = int(w / target)
+            img = img.crop((0, (h - nh) // 2, w, (h - nh) // 2 + nh))
+        img = img.resize((1920, 1080), PILImage.LANCZOS)
+        white = PILImage.new("RGB", img.size, (255, 255, 255))
+        PILImage.blend(white, img, opacity).save(out, quality=88)
+
+    pic = slide.shapes.add_picture(out, 0, 0, width=W, height=H)
+    # Send behind everything else added afterwards.
+    slide.shapes._spTree.remove(pic._element)
+    slide.shapes._spTree.insert(2, pic._element)
+    return pic
+
+
 def header(slide, title, kicker=None):
     accent_bar(slide)
     if kicker:

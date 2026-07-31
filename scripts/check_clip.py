@@ -164,10 +164,18 @@ def main():
     row("Wrong Way", bool(cal_dir),
         "direction set" if cal_dir else "no travel direction calibrated",
         "pick the traffic direction in the 🎯 Speed setup tool")
+    # "missing" was wrong and misleading: the file is present, it is REFUSED.
+    # Saying "missing" sent us hunting for footage for weeks when the real
+    # problem was the model itself.
+    import os as _os
+    _sb_present = _os.path.exists(config.SEATBELT_MODEL)
     row("No Seatbelt", seatbelt_model is not None,
-        "model loaded" if seatbelt_model else "models/seatbelt.pt is missing",
-        "drop a YOLOv8 seatbelt model at models/seatbelt.pt "
-        "(Roboflow Universe has ready-made ones)")
+        "model loaded" if seatbelt_model
+        else ("models/seatbelt.pt REJECTED (classifier - cannot localise the "
+              "belt, and fails to discriminate)" if _sb_present
+              else "models/seatbelt.pt is missing"),
+        "drop a seatbelt DETECTION model (not a classifier) at "
+        "models/seatbelt.pt")
     row("No Helmet", helmet_model is not None,
         "model loaded" if helmet_model else "using the weak colour heuristic",
         "drop a YOLOv8 helmet model at models/helmet.pt")

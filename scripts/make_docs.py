@@ -262,7 +262,7 @@ def documentation():
                  ["No Seatbelt", "Seatbelt model on the windscreen region", "models/seatbelt.pt"],
                  ["Mobile Phone Use", "Phone attributed to a rider or driver", "Visible phone"],
                  ["Illegal Parking", "Stationary past a threshold in a no-parking zone", "Fixed camera"],
-                 ["Driver Fatigue", "Continuous driving without a qualifying break", "Long observation"]],
+                 ["No Rest Break", "Continuous driving with no qualifying stop", "Long observation"]],
                 [30 * mm, 84 * mm, 38 * mm]),
           PageBreak()]
 
@@ -309,7 +309,7 @@ def documentation():
                   "calibration we cannot derive from the clip"],
                  ["Wrong Way", "A known permitted travel direction",
                   "Implemented; requires per-camera direction setting"],
-                 ["Driver Fatigue", "A long continuous observation of one vehicle",
+                 ["No Rest Break", "A long continuous observation of one vehicle",
                   "Implemented; sample clips are too short"]],
                 [30 * mm, 52 * mm, 70 * mm], size=8.2),
           P("This is a footage and calibration constraint, not a software gap. A real "
