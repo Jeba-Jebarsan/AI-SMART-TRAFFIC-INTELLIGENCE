@@ -168,10 +168,25 @@ SUBTITLES = {
 
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else "docs/SPEAKING_SCRIPTS.md"
-    dst = os.path.splitext(src)[0] + ".pdf"
-    stem = os.path.splitext(os.path.basename(src))[0].upper()
+    base = os.path.splitext(src)[0]
+    stem = os.path.basename(base).upper()
     subtitle = SUBTITLES.get(stem, stem.replace("_", " ").title())
-    render(src, dst, subtitle)
+
+    # A PDF the user is reading is locked on Windows, and losing a completed
+    # render to that is maddening the night before a pitch. Walk to the next
+    # free name instead, and say so loudly enough that nobody presents the
+    # stale copy by mistake.
+    for i, dst in enumerate([base + ".pdf"]
+                            + [f"{base}_v{n}.pdf" for n in range(2, 6)]):
+        try:
+            render(src, dst, subtitle)
+        except PermissionError:
+            continue
+        if i:
+            print(f"NOTE: {base}.pdf is open in a PDF reader - wrote {dst} "
+                  f"instead. Close it and re-run to write the real file.")
+        return
+    raise SystemExit(f"every {base}*.pdf is locked - close your PDF reader")
 
 
 if __name__ == "__main__":

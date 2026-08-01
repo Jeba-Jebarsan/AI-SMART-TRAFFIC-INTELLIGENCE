@@ -21,6 +21,7 @@ any answer in ten seconds during Q&A.
 | 6 | Proper SWOT analysis | 8 |
 | 7 | How do you implement it in the real world, and what will go wrong? | 9, 10 |
 | + | How do people subscribe or licence it? | 5.2 |
+| + | How does the pricing model work, and is it right for Sri Lanka? | 5.3, 5.4 |
 
 **The one-sentence answer to all of it:** we sell *coverage*, not software — a
 police force pays roughly LKR 4,500 a month for a camera that watches one point
@@ -331,7 +332,101 @@ somebody else's cloud, and it should not. The Provincial Licence exists precisel
 because the biggest customer needs a deployment model the SaaS tier cannot offer.
 That is not a compromise — it is the highest-margin product we sell.
 
-### 5.3 What we will NOT do: take a share of the fines
+### 5.3 How the pricing model works — the five rules behind those numbers
+
+The numbers in 5.2 are not guesses. Each one comes out of a rule, and the rules
+matter more than the numbers, because the numbers will change and the rules will
+not.
+
+**Rule 1 — Anchor on the alternative, never on our cost.**
+Cost-plus pricing would have given us something like LKR 1,200 a camera, because
+our marginal cost is small. That would be leaving money on the table and, worse,
+it would make us look cheap rather than valuable. The buyer's real alternative is
+three constables covering one point around the clock for about LKR 300,000 a
+month. We charge LKR 5,750 all-in. We are not the cheap option; we are the
+obviously-correct option.
+
+**Rule 2 — Operating cost, not capital cost.**
+This is the most important rule in Sri Lankan government selling and the one most
+startups get wrong. A council officer can approve a recurring maintenance line
+inside an existing budget. A *purchase* — hardware, a one-time activation fee —
+usually needs a capital vote and a tender, which adds six to eighteen months.
+
+So we offer a second shape of the same deal: **LKR 5,000 per camera per month
+with no upfront fee at all**, with the LKR 45,000 activation and the edge box
+rolled in and recovered over 36 months. We earn slightly more in total and the
+customer never has to ask anyone for capital. Expect most government customers to
+take this option.
+
+**Rule 3 — Start at one camera. No minimum.**
+A council should be able to try four cameras without convening a committee. Every
+large deployment we ever win will start as a small one, so the first purchase has
+to be small enough to be boring.
+
+**Rule 4 — Publish the volume tiers now, before we are asked.**
+If we only quote LKR 3,500 and a ministry then asks for 2,000 cameras, we are
+negotiating a discount from zero, in the room, under pressure. So the tiers are
+published from day one:
+
+| Cameras | Price per camera / month |
+|---|---|
+| 1 – 99 | LKR 3,500 |
+| 100 – 499 | LKR 3,000 |
+| 500 – 1,999 | LKR 2,600 |
+| 2,000 + | LKR 2,200 |
+| A whole province | Provincial Licence — LKR 12M / year flat |
+
+The Provincial Licence exists as the top of that ladder for a reason: at
+somewhere around 700 cameras, flat annual pricing becomes cheaper for the
+customer *and* more predictable for us. A ministry values a fixed line item more
+than it values the lowest unit price.
+
+**Rule 5 — Charge fleets per vehicle, not per camera.**
+A fleet owner does not think in cameras. They think in vehicles, and they compare
+every cost to their insurance bill. So LKR 25,000 a month for 25 vehicles —
+LKR 1,000 per vehicle — is a number they can check against a premium in ten
+seconds.
+
+**Summary of the model:** free to enter, cheap to start, cheaper at scale, never
+a capital purchase, and priced in whatever unit the buyer already counts in.
+
+### 5.4 Is this the right price for Sri Lanka?
+
+A price is only right if the person signing can actually approve it. So we tested
+each tier against the budget it would have to come out of.
+
+| Buyer | What they pay us | Compare with | Verdict |
+|---|---|---|---|
+| Municipal council, 40 cameras | LKR 1.68M / year | Less than two constables cost for a year | Fits inside an existing maintenance line |
+| Police HQ, one province | LKR 12M / year | A rounding error against the national Police budget | Approvable without a new budget vote |
+| Fleet of 25 vehicles | LKR 1,000 / vehicle / month | Roughly 10% of a commercial motor premium | Pays for itself on a 10% premium discount |
+| Versus imported software | ~USD 140 / camera / year | Imported ANPR licences typically run USD 200–1,000 per camera per year | We are three to seven times cheaper |
+
+Two more sanity checks:
+
+- **As a share of what it protects.** One camera-year costs about USD 140.
+  Sri Lanka loses roughly 3,000 lives a year to road crashes. Any deployment that
+  prevents a single serious crash has paid for a very large number of cameras.
+- **Against the country's cost base.** USD 12 a month is not a Western SaaS price
+  dropped into a Sri Lankan market — it is roughly a day's wage, per camera, per
+  month. It is deliberately sized so that the *number* is never the reason
+  somebody says no.
+
+**And the part that actually worries us — it is not the price, it is getting
+paid.**
+
+Government in Sri Lanka commonly pays in 90 to 180 days. That delay, not the
+price, is what kills small vendors selling into the public sector. Our
+mitigations, and we would rather state them than be caught by them:
+
+1. 25% of the activation fee invoiced up front, before field work starts.
+2. The Provincial Licence billed quarterly **in advance**, not in arrears.
+3. Private-sector revenue — fleets, campuses, ports — held deliberately as
+   working capital to bridge government receivables.
+4. Never letting a single government contract exceed a share of revenue we cannot
+   survive waiting six months for.
+
+### 5.5 What we will NOT do: take a share of the fines
 
 We were asked how we earn, and the obvious-looking answer is "take 10% of every
 fine". We are deliberately refusing it, for three reasons:
@@ -575,7 +670,7 @@ data-protection compliance, ~10% field operations and travel, ~5% buffer.
 | **Procurement takes 2 years** | We run out of money first | Private-sector revenue track funds us; sub-contract under a registered integrator instead of bidding alone |
 | **Is AI evidence admissible?** | A dispute could invalidate every challan | Human officer approves every fine; full audit trail; calibration certificate per camera; build to the Evidence (Special Provisions) Act |
 | **Privacy backlash / PDPA** | Reputational and legal | No face recognition. Plates only, for a lawful purpose. 90-day retention then auto-purge. Published policy. Anonymised analytics tier |
-| **"Big Brother" media story** | Kills political sponsorship | Lead with deterrence and lives, not fines. Publish violation-rate reductions, not revenue collected. Refuse fine revenue share (Section 5.3) |
+| **"Big Brother" media story** | Kills political sponsorship | Lead with deterrence and lives, not fines. Publish violation-rate reductions, not revenue collected. Refuse fine revenue share (Section 5.5) |
 | **Existing cameras are the wrong quality/angle** | Half the estate is unusable | Survey before signing; state the usable percentage up front; sell our own cameras where needed |
 | **Poor plate images at night / in rain** | ANPR accuracy collapses | Never issue a challan on a low-confidence plate — route to human review. Vote-pool multiple reads. IR-capable cameras at ANPR sites |
 | **A false positive fines an innocent person** | One story destroys years of trust | Human approval gate; confidence thresholds tuned for precision over recall; visible one-click dispute; publish our own error rate |
@@ -687,6 +782,27 @@ source.**
 > Not the police. A private fleet or a university campus — private roads, no
 > legal complexity, a decision-maker who can sign in a week. That revenue funds
 > the two-year government track.
+
+**"Can a Sri Lankan council actually afford this?"**
+> Forty cameras costs a council LKR 1.68 million a year — less than two
+> constables cost for a year, and it fits inside a maintenance line they already
+> have. More importantly, we offer it with no upfront fee at all: LKR 5,000 per
+> camera per month with the setup rolled in over three years. That matters
+> because a council can approve a recurring cost far more easily than a capital
+> purchase.
+
+**"What if a ministry demands a much lower price for 2,000 cameras?"**
+> Then we quote the published tier, which is LKR 2,200, or the flat Provincial
+> Licence — because we published the volume ladder before anyone asked. We would
+> rather set the discount ourselves in advance than negotiate down from a single
+> number under pressure in the room.
+
+**"Government pays late. How do you survive that?"**
+> That is the real pricing risk, not the price. We invoice 25% of activation up
+> front, bill the provincial licence quarterly in advance rather than in arrears,
+> and deliberately hold private-sector revenue as working capital to bridge
+> government receivables. We also cap how much of our revenue any one government
+> contract is allowed to be.
 
 ### On implementation
 

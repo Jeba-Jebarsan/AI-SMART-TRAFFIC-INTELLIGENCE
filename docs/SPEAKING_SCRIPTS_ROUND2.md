@@ -1,7 +1,7 @@
 # Round 2 — Speaking Scripts
 
 **Team Three Hacks | Startup Innovation Competition 2026 — Second Round**
-Deck: `docs/PRESENTATION_ROUND2.pptx` (22 slides)
+Deck: `docs/PRESENTATION_ROUND2.pptx` (31 slides, 4 parts)
 Backing document: `docs/BUSINESS_PLAN.md` / `.pdf`
 
 ---
@@ -12,9 +12,9 @@ In Round 1 the panel asked *"does it work?"* — and they answered that themselv
 They said the idea was good and they were impressed with the build. Then they ran
 out of time and gave us homework.
 
-So **do not re-pitch the technology.** If we spend five minutes again on YOLO and
-helmets, we are answering a question nobody asked, in front of the same people
-who already said yes to it.
+So **do not re-pitch the detection.** If we spend five minutes again on helmets
+and number plates, we are answering a question nobody asked, in front of the same
+people who already said yes to it.
 
 Round 2 is one question: **how does this get onto a real road, and how does it
 make money?**
@@ -25,23 +25,27 @@ make money?**
 
 ---
 
-## Who says what
+## The four parts
 
-| Part | Speaker | Name | Slides | Roughly |
-|---|---|---|---|---|
-| 1 | Speaker 1 — **me** | ____________________ | 1–6 | 5 min |
-| 2 | Speaker 2 | ____________________ | 7–11 | 5 min |
-| 3 | Speaker 3 | ____________________ | 12–17 | 5 min |
-| 4 | Speaker 1 again | ____________________ | 18–22 | 4 min |
+| Part | Main focus | Speaker | Name | Slides | Time |
+|---|---|---|---|---|---|
+| **1** | **Business strategy** — who will buy it | Speaker 1 (me) | ____________ | 3–7 | 5 min |
+| **2** ⭐ | **Technology** — camera, AI, data, maps, detection flow | Speaker 2 | ____________ | 8–16 | 7 min |
+| **3** | **Money** — pricing, subscription, revenue | Speaker 3 | ____________ | 17–24 | 6 min |
+| **4** | **Implementation** — launch, risks, the ask | Speaker 1 again | ____________ | 25–31 | 5 min |
+
+Slides 1 and 2 are the opening, spoken by Speaker 1 before Part 1 begins.
+
+**Part 2 is the biggest on purpose.** ⭐ The zone-data question is the one the
+panel pressed hardest on, and it is the one they will remember whether we
+answered.
 
 Speaker 1 opens and closes. That is deliberate — the person who set up the
 promise is the person who lands it.
 
-**If the panel gives us less time than we expect**, cut in this order:
-slide 20 (moat), slide 17 (SWOT — hand it over as a document instead), slide 16
-(ceiling), slide 13 (fine revenue share). Never cut slides 7–11. The zone-data
-question is the one they pressed hardest on and it is the one they will remember
-whether we answered.
+**If we are given less time than expected**, cut in this order: slide 29 (moat),
+slide 28 (SWOT — hand it over as a document instead), slide 24 (ceiling),
+slide 21 (fine revenue share). **Never cut slides 12–16.**
 
 ---
 
@@ -49,32 +53,41 @@ whether we answered.
 
 | # | Slide | Its one job |
 |---|---|---|
-| 1 | Title — from a working system to a business | Set the frame: this round is about deployment, not detection |
+| 1 | Title | Set the frame: this round is about deployment, not detection |
 | 2 | You asked us seven questions | Show we listened. Buys goodwill in ten seconds |
-| 3 | Who benefits is not who signs | Prove we understand the customer, not just the user |
-| 4 | The ladder to the Police | **Decisive.** The direct answer to "how do you connect with the police" |
-| 5 | The AI proposes, an officer decides | **Decisive.** Solves legal, trust and political risk in one line |
-| 6 | Two tracks | Answer "how do you survive two years of procurement" before they ask |
-| 7 | Two kinds of data | **Decisive.** Reframes the hardest question so it becomes answerable |
-| 8 | Geo-register once, 4 minutes | The arithmetic that makes 1,000 cameras a line item, not a blocker |
-| 9 | Import the world once | Show the data already exists, in government hands |
-| 10 | Six of ten rules need no map | Kill the "so you can't deploy for a year" objection |
-| 11 | Cameras already on the poles | The 400× bandwidth argument. Wins the technical judge |
-| 12 | The price list | The literal answer to "how do people subscribe or licence it" |
-| 13 | Why not a share of the fines | **Decisive.** Shows commercial maturity, not just arithmetic |
-| 14 | Priced against a constable | **Decisive.** The single most persuasive number in the deck |
-| 15 | Western Province, three years | The revenue model they asked for, with the working shown |
-| 16 | The honest ceiling | Say the weakness before they find it. Buys enormous credibility |
-| 17 | SWOT | Directly requested. Keep it honest or it is worthless |
-| 18 | Roadmap | "How will you implement it in the real world" |
-| 19 | What will go wrong | "What challenges will you face" |
-| 20 | The moat | Answer the Hikvision question before it is asked |
-| 21 | The ask | Tell them what we actually want from them |
-| 22 | Close | Land it and stop talking |
+| **3** | **PART 1 — Business strategy** | Breath. Tell them what is coming |
+| 4 | Who benefits is not who signs | Prove we understand the customer, not just the user |
+| 5 | The ladder to the Police | **Decisive.** The direct answer to "how do you connect with the police" |
+| 6 | The AI proposes, an officer decides | **Decisive.** Solves legal, trust and political risk in one line |
+| 7 | Two tracks | Answer "how do you survive two years of procurement" before they ask |
+| **8** | **PART 2 — Technology** ⭐ | Breath |
+| 9 | The whole system in six steps | Give them the map before the detail |
+| 10 | Where the pictures come from | Answers "how do you import from existing CCTV" |
+| 11 | Why the thinking happens on the pole | The 400× bandwidth argument. Wins the technical judge |
+| 12 | What the AI does with one frame | Show the discipline — why the output can be trusted as evidence |
+| 13 | Two kinds of data | **Decisive.** Reframes the hardest question so it becomes answerable |
+| 14 | Geo-register once, 4 minutes | The arithmetic that makes 1,000 cameras a line item, not a blocker |
+| 15 | Import the world once | The data already exists, in government hands |
+| 16 | Six of ten need no map | Kills "so you cannot deploy for a year" |
+| **17** | **PART 3 — Money** | Breath |
+| 18 | The price list | The literal answer to "how do people subscribe or licence it" |
+| 19 | Five rules we used to set the price | **Decisive.** Shows the pricing is designed, not guessed |
+| 20 | Is this right for Sri Lanka? | **Decisive.** Local credibility. Includes the late-payment risk |
+| 21 | Why not a share of the fines | Shows commercial maturity, not just arithmetic |
+| 22 | Priced against a constable | **Decisive.** The single most persuasive number in the deck |
+| 23 | Western Province, three years | The revenue model they asked for, with the working shown |
+| 24 | The honest ceiling | Say the weakness before they find it. Buys enormous credibility |
+| **25** | **PART 4 — Implementation** | Breath |
+| 26 | Roadmap | "How will you implement it in the real world" |
+| 27 | What will go wrong | "What challenges will you face" |
+| 28 | SWOT | Directly requested. Keep it honest or it is worthless |
+| 29 | The moat | Answer the Hikvision question before it is asked |
+| 30 | The ask | Tell them what we actually want from them |
+| 31 | Close | Land it and stop talking |
 
 ---
 
-# PART 1 — Speaker 1 (me) — slides 1 to 6
+# OPENING — Speaker 1 — slides 1 and 2
 
 ## Slide 1 — Title
 
@@ -95,18 +108,30 @@ whether we answered.
 
 ## Slide 2 — You asked us seven questions
 
-> You gave us seven things. Who is the customer. How do we reach the police.
-> Where the zone data comes from at scale. How we import from existing CCTV. The
-> revenue model. A SWOT. And how we implement it in the real world.
+> You gave us seven things. Who is the customer. How we reach the police. How we
+> import from existing CCTV. Where the zone data comes from at scale. The revenue
+> model. A SWOT. And how we implement it in the real world.
 
-> This slide is our contents page. Every one of those seven is answered in the
-> next twenty minutes, and the slide number is written next to it.
+> This slide is our contents page. Every one of them is answered, and the slide
+> number is written next to it.
+
+> We have split the next twenty minutes into four parts. **Part one, business
+> strategy — who will buy this. Part two, the technology — the camera, the AI,
+> the data and the maps. Part three, the money. Part four, how we launch it.**
 
 > **[Look up from the slide]**
 
-> We have not re-pitched the technology. You already told us it works.
+> We have not re-pitched the detection. You already told us it works.
 
-## Slide 3 — Who benefits is not who signs
+---
+
+# PART 1 — Business strategy — Speaker 1 — slides 3 to 7
+
+## Slide 3 — Part divider
+
+> **Part one. Who will buy this.**
+
+## Slide 4 — Who benefits is not who signs
 
 > The first thing we got wrong in Round 1 was this. We kept saying "our customer
 > is the police". That is who *benefits*. It is not who *signs*.
@@ -116,13 +141,13 @@ whether we answered.
 > twenty-four months, because a national police contract needs supplier
 > registration, audited accounts and a performance bond.
 
-> **[Slow down here]**
+> **[Slow down]**
 
 > The police are our biggest customer and our slowest customer. Three students
 > cannot live for two years on no revenue. So we do not choose between them. We
 > run two tracks.
 
-## Slide 4 — The ladder
+## Slide 5 — The ladder
 
 > This is our answer to "how do you connect with the Sri Lanka Police". We do not
 > walk into headquarters and ask for a contract. We climb a ladder, and every
@@ -136,9 +161,9 @@ whether we answered.
 > yes. It costs us two cameras and a month of electricity.
 
 > **Rung two.** We take that report to the National Council for Road Safety and
-> to Police Traffic Headquarters, and we ask for exactly one thing that is free
-> for them to give — a letter of support. That letter is the most valuable thing
-> in this entire plan.
+> to Police Traffic Headquarters, and we ask for one thing that is free for them
+> to give — a letter of support. That letter is the most valuable thing in this
+> entire plan.
 
 > **Rung three.** A supervised pilot in one division, and we publish the results
 > honestly, including the bad ones.
@@ -147,7 +172,7 @@ whether we answered.
 > under an integrator who already holds government vendor registration. That
 > turns a two-year procurement problem into a two-month partnership.
 
-## Slide 5 — The AI proposes, an officer decides
+## Slide 6 — The AI proposes, an officer decides
 
 **[This is a slow slide. Let it sit.]**
 
@@ -172,7 +197,7 @@ whether we answered.
 
 > We are not asking a court, or a country, to trust an algorithm.
 
-## Slide 6 — Two tracks
+## Slide 7 — Two tracks
 
 > So here is how we survive the two years.
 
@@ -194,18 +219,142 @@ whether we answered.
 > then that insurer's agents sell our product to every fleet in their book, and we
 > pay nothing for it.
 
-> **[Hand over]** — *Now [Speaker 2] will take the question you pressed us hardest
-> on.*
+> **[Hand over]** — *Now [Speaker 2] will take you through how the technology
+> actually works, and answer the question you pressed us hardest on.*
 
 ---
 
-# PART 2 — Speaker 2 — slides 7 to 11
+# PART 2 ⭐ — Technology — Speaker 2 — slides 8 to 16
 
-## Slide 7 — Two kinds of data
+**This part answers four of their seven questions.** Take your time. If anything
+overruns, it should be Part 3 or 4, not this.
 
-> Thank you. You asked us: when you go from one junction to a whole city, where
-> does the zone data come from? The speed limits, the parking areas, the road
-> limits.
+## Slide 8 — Part divider
+
+> **Part two. The technology.** The camera, the AI, the data and the maps — and
+> how a moving vehicle becomes a challan.
+
+## Slide 9 — The whole system in six steps
+
+> Before the detail, here is the whole thing on one slide. Six steps.
+
+> **One, the camera.** It can be a council's existing CCTV, our own camera, or a
+> drone — we fly one today. We read the video using a standard called ONVIF, over
+> RTSP.
+
+> **Two, the edge box.** One small computer, in the cabinet that is already on the
+> pole. It handles about four cameras.
+
+> **Three, detect.** The AI finds vehicles, riders, helmets, phones and number
+> plates in every frame, and it gives each vehicle an identity number that stays
+> with it as it moves.
+
+> **Four, measure.** This is where the map comes in. The calibration turns pixels
+> into metres, so we get a real speed and a real position on the road — not a
+> guess.
+
+> **Five, judge.** Ten rules run at the same time. Each one needs several frames
+> to agree before it will accuse anybody.
+
+> **Six, evidence.** A photograph, with the plate, time, place and rule stamped
+> onto it, goes into an officer's queue. When the officer approves it, it becomes
+> a challan.
+
+> **[Point at the bottom line — this is the sentence that matters]**
+
+> Only step six ever leaves the site. Everything before it happens on the pole.
+
+## Slide 10 — Where the pictures come from
+
+> You asked how we get data out of the CCTV that already exists.
+
+> Almost every camera and every recorder installed in this country speaks a
+> standard called ONVIF, over RTSP. We just pull the stream. No firmware change,
+> no rewiring, nothing new on the pole. If a council has two hundred cameras, we
+> can be reading them the same week.
+
+> We have three sources. Council CCTV that is already installed and already paid
+> for. Our own camera, where none exists or the angle is wrong. And a drone, which
+> is what we have been testing with.
+
+> **[Now the honest part — say it, do not skip it]**
+
+> But I want to be honest about something. Most municipal CCTV in this country
+> was installed to watch for theft, not to read number plates. It is mounted high
+> and angled wide. We expect only about forty percent of any existing camera
+> estate to be usable for enforcement without repositioning.
+
+> So we survey it and we tell the customer that number **before** they sign, not
+> after. And where a camera will not do the job, we supply one — which is revenue
+> for us, not a problem.
+
+## Slide 11 — Why the thinking happens on the pole
+
+> This is our most important technical slide.
+
+> **[Point at row one]**
+
+> If you send a thousand video streams to a central server, that is two gigabits
+> per second, continuously, and about twenty-one terabytes a day. That will not
+> work on a municipal network in Sri Lanka. Honestly, it would not work in most
+> countries.
+
+> **[Point at row two]**
+
+> So we do the detection at the edge, on that small box, and we send only the
+> *events*. A complete violation record — the data plus the photograph — is about
+> two hundred and fifty kilobytes.
+
+> **[Pause]**
+
+> That is roughly a four hundred times reduction in bandwidth. That is the
+> difference between this being deployable on the infrastructure Sri Lanka already
+> has, and not being deployable at all.
+
+> Three things follow from that. It runs on an ordinary small computer — we use
+> the CPU today, no graphics cards, no data centre. If the internet link drops,
+> events queue up locally on a small battery and sync when it comes back, so
+> nothing is lost. And we keep only the evidence photograph, not the video —
+> ninety days, then it deletes itself.
+
+## Slide 12 — What the AI does with one frame
+
+> Now, what actually happens inside. Six steps, and I want you to notice
+> something about them.
+
+> **Detect.** One pass of the model finds vehicles, people, helmets, phones and
+> number plates.
+
+> **Track.** The same motorcycle keeps identity number forty-seven across frames.
+> That matters, because it lets a rule watch a vehicle over time instead of
+> judging a single photograph.
+
+> **Associate.** Is this person actually *on* that motorcycle? We check the
+> overlap, the centre position and where the feet are. That is what stops a
+> pedestrian standing next to a bike being fined for not wearing a helmet.
+
+> **Persist.** Three or four frames have to agree before we accuse anybody. One
+> bad frame is never enough.
+
+> **Measure.** Is the vehicle genuinely moving? We measure net displacement with
+> the camera's own shake removed — so a parked bike can never be fined.
+
+> **Refuse.** And if the camera is not calibrated, the rules that need geometry do
+> not fire at all. We had a speed estimate that reported one hundred and fifty
+> five kilometres an hour for a car sitting still at a junction. We deleted it,
+> rather than ship it.
+
+> **[Look up — this is the point of the whole slide]**
+
+> Notice that four of those six steps exist to stop the system firing, not to make
+> it fire. Most of our engineering went into the checks. In a product whose output
+> is evidence, that is the whole job.
+
+## Slide 13 — Two kinds of data
+
+> Now the question you pressed us hardest on. When you go from one junction to a
+> whole city, where does the zone data come from? The speed limits, the parking
+> areas, the road limits.
 
 > That was the best question we got, and honestly we did not have a good answer
 > on the day.
@@ -232,19 +381,19 @@ whether we answered.
 
 > That does *not* belong to the camera. It belongs to the map.
 
-> We had been treating both as per-camera work, which made the job look a hundred
-> times bigger than it is.
+> We had been treating both as per-camera work, and that made the job look a
+> hundred times bigger than it is.
 
-## Slide 8 — Geo-register once
+## Slide 14 — Geo-register once
 
-> So step one. Instead of clicking four corners and typing metres, the operator
-> drags four points on the camera image, and the matching four points on a
-> satellite map.
+> So, the camera geometry. Instead of clicking four corners and typing metres,
+> the operator drags four points on the camera image, and the matching four points
+> on a satellite map.
 
-> That single act — about four minutes — then gives us everything automatically.
-> Metres per pixel, so we can measure speed. The stop line position, from the map.
-> The legal direction of travel, from the road centreline. The no-parking areas,
-> projected into the camera's view. School zones. Bus halts.
+> That single act — about four minutes — then gives us everything else
+> automatically. Metres per pixel, so we can measure speed. The stop line
+> position, from the map. The legal direction of travel, from the road centreline.
+> The no-parking areas, projected into the camera's view. School zones. Bus halts.
 
 > **[Point at the numbers]**
 
@@ -259,10 +408,10 @@ whether we answered.
 > geometry rules and asks to be recalibrated — instead of quietly fining the wrong
 > people.
 
-## Slide 9 — Import the world once
+## Slide 15 — Import the world once
 
-> Step two. The world knowledge — the limits, the no-parking zones — we do not
-> create it. It already exists, and mostly it is already in government hands.
+> Now the world knowledge — the limits and the no-parking zones. We do not create
+> that data. It already exists, and mostly it is already in government hands.
 
 > The Road Development Authority holds the road register: road class and
 > centreline geometry. The Survey Department and the provincial GIS hold the
@@ -286,12 +435,10 @@ whether we answered.
 > human to approve.** We never let the system quietly invent a rule and then
 > enforce it.
 
-## Slide 10 — Six of ten need no map
+## Slide 16 — Six of ten need no map
 
-> And then the third part of the answer, which is the one we are proudest of,
+> And then the last part of the answer, which is the one we are proudest of,
 > because it was already built before you asked.
-
-> Where we still do not know, we refuse to guess.
 
 > **[Point at the table]**
 
@@ -302,63 +449,28 @@ whether we answered.
 > Six of our ten rules work on day one with **zero** map data.
 
 > The other four wait. And they do not wait by guessing — they wait by switching
-> off. Before Round 1 we deleted our own speed estimate for uncalibrated cameras,
-> because it was reporting a hundred and fifty five kilometres an hour for a car
-> sitting still at a junction. And our red light rule cannot fire at all until a
-> real stop line has been surveyed. There is an automated test that enforces that.
+> off.
 
 > **[Look up]**
 
-> So the honest answer to your question is: the data problem is real, it is a
-> few weeks of work per province, and it does not stop us deploying on day one.
-> The customer sees value in week one, not month six.
-
-## Slide 11 — Cameras already on the poles
-
-> Your other question was how we get data out of the CCTV that already exists.
-
-> Almost every camera and recorder installed in this country speaks a standard
-> called ONVIF, over RTSP. We just pull the stream. No firmware change, no
-> rewiring, nothing new on the pole. If a council has two hundred cameras, we can
-> be reading them the same week.
-
-> But there is a trap, and this table is the most important technical slide we
-> have.
-
-> **[Point at row one]**
-
-> If you send a thousand video streams to a central server, that is two gigabits
-> per second, continuously, and about twenty-one terabytes a day. That will not
-> work on a municipal network in Sri Lanka. It would not work in most countries.
-
-> **[Point at row two]**
-
-> So we do the detection at the edge — a small box in the cabinet that already
-> exists, handling about four cameras — and we send only the *events*. A complete
-> violation record with its photograph is about two hundred and fifty kilobytes.
-
-> That is roughly a four hundred times reduction in bandwidth. That is the
-> difference between this being deployable on the infrastructure that already
-> exists, and not being deployable at all.
-
-> **[The honest caveat — say it, do not skip it]**
-
-> One honest warning. Most municipal CCTV in this country was installed to watch
-> for theft, not to read number plates. It is mounted high and angled wide. We
-> expect only about forty percent of any existing camera estate to be usable for
-> enforcement without repositioning. We survey it and we tell the customer that
-> *before* they sign, not after.
+> So the honest answer to your question is: the data problem is real, it is a few
+> weeks of work per province, and it does not stop us deploying on day one. The
+> customer sees value in week one, not month six.
 
 > **[Hand over]** — *Now [Speaker 3] will take the money.*
 
 ---
 
-# PART 3 — Speaker 3 — slides 12 to 17
+# PART 3 — Money — Speaker 3 — slides 17 to 24
 
-## Slide 12 — The price list
+## Slide 17 — Part divider
 
-> Thank you. You asked how someone actually subscribes or licences this. Here it
-> is.
+> **Part three. The money.** What it costs, what people pay, and why those numbers
+> are right for Sri Lanka.
+
+## Slide 18 — The price list
+
+> You asked how someone actually subscribes or licences this. Here it is.
 
 > The top row is free, and it is deliberate — that is the thirty-day audit
 > [Speaker 1] described. It is how we get in the door.
@@ -367,69 +479,136 @@ whether we answered.
 > core rules. Five thousand five hundred if they want plate recognition and
 > printed challans.
 
-> Fleets are different — they pay per fleet, not per camera, twenty five thousand
+> Fleets are different — they pay per fleet, not per camera. Twenty five thousand
 > a month for up to twenty five vehicles.
 
 > **[Point at the Provincial Licence row]**
 
 > And this row is the important one. A ministry or Police Headquarters does not
 > want a per-camera cloud subscription. They want unlimited cameras, **on their
-> own premises**, with a service agreement and source code held in escrow. Twelve
-> million rupees per province per year.
+> own premises**, with a service agreement. Twelve million rupees per province per
+> year.
 
 > A police force will not put criminal evidence in somebody else's cloud. And
 > honestly, they should not. So the on-premise licence is not a compromise for us
 > — it is the highest margin product we sell.
 
-> Below that are the one-time charges: forty five thousand per camera to survey,
-> calibrate and train, and the edge box at cost plus fifteen percent. We
-> deliberately make almost nothing on hardware. Hardware is not a business. It is
-> just how our software gets onto the pole.
+## Slide 19 — Five rules we used to set the price
 
-## Slide 13 — Why not a share of the fines
+> Now, where did those numbers come from? They are not guesses. Each one comes
+> out of a rule — and the rules matter more than the numbers, because the numbers
+> will change and the rules will not.
 
-> Now — when we told people we were building this, almost everyone said the same
-> thing. *Take ten percent of every fine.*
+> **Rule one. Anchor on the alternative, not on our cost.** If we priced on cost,
+> we would have charged about twelve hundred rupees, because our marginal cost is
+> small. But the buyer's real alternative is three constables, at three hundred
+> thousand rupees a month. So we price against that.
 
-> We are refusing that, deliberately, and I want to explain why, because it is
-> probably the most important commercial decision in this plan.
+> **Rule two, and this is the most important one for selling to government.
+> Operating cost, not capital cost.** A council officer can approve a monthly
+> maintenance line inside a budget they already have. A *purchase* needs a capital
+> vote and a tender, and that adds six to eighteen months.
 
-> **[One at a time]**
+> **[Slow down here — this is the insight]**
+
+> So we offer the same deal in a different shape: **five thousand rupees per
+> camera per month, with no upfront fee at all** — the setup and the hardware
+> rolled in and recovered over three years. We actually earn slightly more in
+> total, and the customer never has to ask anybody for capital. We expect most
+> government customers to take this option.
+
+> **Rule three. Start at one camera.** No minimum order. A council should be able
+> to try four cameras without convening a committee.
+
+> **Rule four. Publish the volume tiers now, before we are asked.** If we only
+> quote three thousand five hundred, and then a ministry asks for two thousand
+> cameras, we are negotiating a discount from zero, in the room, under pressure.
+> So the ladder is published from day one — three thousand at a hundred cameras,
+> two thousand six hundred at five hundred, two thousand two hundred above two
+> thousand.
+
+> **Rule five. Charge fleets per vehicle, not per camera** — because that is the
+> unit a fleet owner already counts in and can check against their insurance bill.
+
+> **[Land it]**
+
+> Free to enter, cheap to start, cheaper at scale, never a capital purchase, and
+> always priced in the unit the buyer already uses.
+
+## Slide 20 — Is this the right price for Sri Lanka?
+
+> But a price is only right if the person signing can actually approve it. So we
+> tested every tier against the budget it would have to come out of.
+
+> **A council with forty cameras** pays us one point six eight million rupees a
+> year. That is less than two constables cost for a year, and it fits inside a
+> maintenance line they already have.
+
+> **Police Headquarters, for a whole province**, pays twelve million a year. Set
+> against the national police budget, that is a rounding error. It can be approved
+> without a new budget vote.
+
+> **A fleet of twenty five vehicles** pays a thousand rupees per vehicle per
+> month. That is about ten percent of a commercial motor insurance premium. So if
+> we can get them a ten percent discount, the system is free.
+
+> **And against imported software** — an imported ANPR licence typically runs two
+> hundred to a thousand US dollars per camera per year. We are about a hundred and
+> forty. Three to seven times cheaper.
+
+> **[Now the honest box — do not rush this]**
+
+> But I want to name the real risk, and it is not the price.
+
+> **[Pause]**
+
+> Government in Sri Lanka pays in ninety to a hundred and eighty days. That delay
+> — not the price — is what kills small vendors selling to the public sector.
+
+> So we plan for it. Twenty five percent of the activation fee is invoiced before
+> field work starts. The provincial licence is billed quarterly **in advance**,
+> not in arrears. And we deliberately hold private-sector revenue as working
+> capital to bridge government receivables.
+
+> We would rather price this so a council can say yes this quarter, than price it
+> so it looks impressive on a slide.
+
+## Slide 21 — Why not a share of the fines
+
+> One more thing about the model. When we told people we were building this,
+> almost everyone said the same thing. *Take ten percent of every fine.*
+
+> We are refusing that, deliberately.
 
 > First, it is probably not legal. Fines under the Motor Traffic Act are public
 > revenue. Assigning a private slice of public revenue is a constitutional and an
-> audit problem, and it would sink us in the first review.
+> audit problem.
 
-> Second, and this is the real reason — it creates exactly the wrong incentive. A
-> company that gets paid per fine is a company that *wants more fines.* Our actual
-> goal is fewer violations. If a deployment works properly, offending at that
-> junction should fall by twenty five percent in three months. Under revenue
-> share, success would bankrupt us.
+> Second — and this is the real reason — it creates exactly the wrong incentive.
+> A company that gets paid per fine is a company that *wants more fines.* Our goal
+> is fewer violations. If a deployment works properly, offending at that junction
+> should fall by twenty five percent in three months. Under revenue share, success
+> would bankrupt us.
 
 > Third, it is politically fatal. "Startup profits from fining Sri Lankan
 > motorists" is a headline that ends the company in a week.
 
-> **[Land it]**
-
 > A subscription pays us for coverage and for deterrence. That is the outcome the
-> customer actually wants. We think this is the most grown-up part of our business
-> model, and we would rather you tested us on it than on the revenue number.
+> customer actually wants.
 
-## Slide 14 — Priced against a constable
+## Slide 22 — Priced against a constable
 
-> So where does three thousand five hundred rupees come from? We did not pick it
-> from the air. We priced it against the alternative.
-
-> **[Read down the table]**
+> So where does three thousand five hundred rupees come from? We priced it against
+> the alternative.
 
 > One traffic constable costs roughly a hundred thousand rupees a month, all in.
 > They cover eight hours — one shift. To watch one junction around the clock you
 > need three of them. That is about three hundred thousand rupees a month.
 
 > One camera on our platform costs three thousand five hundred, plus about twelve
-> hundred a month if you spread the setup cost over three years. Call it five
-> thousand seven hundred and fifty. It watches twenty four hours. It watches ten
-> rules at the same time. And it produces a photograph every single time.
+> hundred a month if you spread the setup over three years. Call it five thousand
+> seven hundred and fifty. It watches twenty four hours. It watches ten rules at
+> the same time. And it produces a photograph every single time.
 
 > **[Pause]**
 
@@ -443,13 +622,12 @@ whether we answered.
 
 > Our gross margin at that price is about seventy four percent.
 
-## Slide 15 — Western Province, three years
+## Slide 23 — Western Province, three years
 
 > You asked us to fix a province and show the revenue. We chose Western Province
 > — Colombo, Gampaha, Kalutara. Highest vehicle density, highest crash count, the
 > most existing CCTV, and Police Headquarters and the National Council for Road
-> Safety are both physically there. We can reach every customer in a day without
-> getting on a plane.
+> Safety are both physically there.
 
 > **Year one is small on purpose.** Eighty cameras, ten and a half million rupees
 > of revenue, about thirty six thousand dollars. We spend twenty one and a half
@@ -461,22 +639,19 @@ whether we answered.
 > rupees — about two hundred and seventy three thousand dollars — and we cross
 > into profit. That is our breakeven year.
 
-> Year three, three more provinces and the first regional pilot, about three
-> hundred million rupees. Roughly a million dollars.
+> Year three, three more provinces and the first regional pilot. About a million
+> dollars.
 
 > **[Point at the footnote — say it out loud, do not let them find it]**
 
-> And I want to be direct about these numbers. These are our own modelled
-> assumptions. We have shown you the working — the camera counts, the price per
-> camera, the headcount — so you can push on any line of it. But we are not
-> presenting these as published facts, and there is a list in our written plan of
-> the figures we still have to verify before we ever put them in front of an
-> investor.
+> And I want to be direct. These are our own modelled assumptions. We have shown
+> you the working — the camera counts, the price, the headcount — so you can push
+> on any line of it. But we are not presenting them as published facts, and there
+> is a list in our written plan of the figures we still have to verify.
 
-> That year one deficit, by the way, is our ask. Fifteen million rupees. About
-> fifty thousand dollars.
+> That year one deficit, by the way, is our ask. Fifteen million rupees.
 
-## Slide 16 — The honest ceiling
+## Slide 24 — The honest ceiling
 
 > Now I am going to say the thing you are all working out in your heads anyway,
 > before you say it.
@@ -497,60 +672,34 @@ whether we answered.
 > Because the same product, with no changes, works in Bangladesh, Nepal,
 > Pakistan, Vietnam, Kenya, Nigeria, Tanzania. Same traffic — motorcycles,
 > three-wheelers, mixed lanes, everybody sharing the road. That is precisely what
-> European and American systems are *not* built for, and it is exactly what ours
-> is built for. Worse death rates than ours. And donor money already attached to
-> fixing them.
+> European and American systems are *not* built for, and exactly what ours is.
+> Worse death rates than ours. And donor money already attached to fixing them.
 
 > Sri Lanka is our reference customer. It is not the whole business.
 
-## Slide 17 — SWOT
-
-> You asked for a SWOT, so here is an honest one. I will go quickly and stop on
-> the two that matter.
-
-> **[Point at Weaknesses]**
-
-> The one I want you to see is the second line. **We do not have a measured
-> accuracy number yet.** We have not benchmarked against a labelled Sri Lankan
-> ground truth set, so we cannot tell you our precision, and a court will
-> eventually ask. That is our number one engineering priority and it is in phase
-> zero of our roadmap.
-
-> And the third line — our seatbelt rule is switched off. The model we obtained
-> turned out to be broken: it called a driver wearing a belt a violation, and it
-> called an empty motorway a violation too. So we disabled the rule rather than
-> ship something that accuses innocent drivers.
-
-> **[Look up — this is the point]**
-
-> We would rather tell you that than have you find it.
-
-> **[Point at Threats]**
-
-> And the top threat is the real one. Hikvision, Dahua, Huawei — they can give
-> this software away free to win the camera hardware contract. That is our biggest
-> commercial risk and [Speaker 1] will tell you what we do about it.
-
-> **[Hand back]**
+> **[Hand back]** — *[Speaker 1] will finish with how we actually launch it.*
 
 ---
 
-# PART 4 — Speaker 1 again — slides 18 to 22
+# PART 4 — Implementation — Speaker 1 — slides 25 to 31
 
-## Slide 18 — Roadmap
+## Slide 25 — Part divider
 
-> Thank you. So — how does this actually reach a road?
+> **Part four. Implementation.** How we launch it, what will go wrong, and what we
+> need from you.
 
-> **Phase zero, the next three months.** We incorporate. We build the labelled
-> Sri Lankan ground-truth set and publish real accuracy numbers. We build the
-> officer review queue. And we do a data protection gap assessment against the
-> Personal Data Protection Act of 2022. We are done with this phase when we can
-> state an accuracy figure and defend it.
+## Slide 26 — Roadmap
+
+> **Phase zero, the next three months.** We incorporate. We build a labelled Sri
+> Lankan ground-truth set and publish real accuracy numbers. We build the officer
+> review queue. And we do a data protection gap assessment against the Personal
+> Data Protection Act of 2022. We are done when we can state an accuracy figure
+> and defend it.
 
 > **Phases one to three** are the ladder — the free audit, the letter, the
 > supervised pilot.
 
-> **Phase four runs in parallel** and it is the private customers that keep us
+> **Phase four runs in parallel**, and it is the private customers that keep us
 > alive.
 
 > **Phase five is the province.** Six hundred cameras and breakeven.
@@ -563,45 +712,63 @@ whether we answered.
 > is the longest-lead item in the whole plan. So we start it in phase two, not
 > phase five.
 
-## Slide 19 — What will go wrong
+## Slide 27 — What will go wrong
 
-> You asked what challenges we will face. Here are the nine we are planning for.
-
-> I will take three.
+> You asked what challenges we will face. Here are the ten we are planning for.
+> Let me take three.
 
 > **Is AI evidence admissible in a Sri Lankan court?** The Evidence Special
 > Provisions Act of 1995 makes computer-generated evidence admissible if you can
 > show the system was working properly. So we keep a calibration certificate for
-> every camera, an audit log that cannot be edited, and — most importantly — an
-> officer approves every single fine.
+> every camera, an audit log that cannot be edited, and an officer approves every
+> single fine.
 
 > **Privacy.** No face recognition. Ever. Plates only, for a lawful enforcement
-> purpose, kept ninety days and then automatically deleted. That is designed
-> against the Data Protection Act from day one, not bolted on afterwards.
+> purpose, kept ninety days and then automatically deleted. Designed against the
+> Data Protection Act from day one, not bolted on afterwards.
 
 > **And the one nobody talks about.** Somebody will ring up and ask for a challan
 > to disappear. So every view, every approval and every cancellation is written to
-> an append-only log with a named officer against it, and supervisors get a report
-> on cancellation rates. We cannot stop it happening. We can make sure it leaves a
-> mark.
+> a log that cannot be edited, with a named officer against it, and supervisors
+> get a report on cancellation rates. We cannot stop it happening. We can make
+> sure it leaves a mark.
 
-## Slide 20 — The moat
+## Slide 28 — SWOT
 
-> On Hikvision.
+> You asked for a SWOT, so here is an honest one. I will stop on two.
+
+> **[Point at Weaknesses]**
+
+> The second line. **We do not have a measured accuracy number yet.** We have not
+> benchmarked against a labelled Sri Lankan ground truth set, so we cannot tell
+> you our precision, and a court will eventually ask. That is our number one
+> engineering priority and it is phase zero of our roadmap.
+
+> And the third line — our seatbelt rule is switched off. The model we obtained
+> turned out to be broken: it called a driver wearing a belt a violation, and it
+> called an empty motorway a violation too. So we disabled the rule rather than
+> ship something that accuses innocent drivers.
+
+> **[Look up]**
+
+> We would rather tell you that than have you find it.
+
+## Slide 29 — The moat
+
+> On Hikvision, since somebody usually asks.
 
 > The model is not our moat. Anybody can download YOLO — we did. So we do not
 > compete on price against a company that can give the software away. We run *on
 > top of* their hardware and sell the layer they cannot.
 
 > Five things actually defend us. A thousand geo-registered cameras is months of
-> field work a competitor has to repeat from scratch. Once challans flow through
-> our review queue, switching means retraining officers. A labelled Sri Lankan
-> dataset — plates, helmets, three-wheelers, night, monsoon — that no foreign
-> vendor has. Legal precedent: the first vendor whose challan survives a court
-> challenge owns this category. And a local cost base that undercuts anyone
-> importing engineers.
+> field work a competitor has to repeat. Once challans flow through our review
+> queue, switching means retraining officers. A labelled Sri Lankan dataset that
+> no foreign vendor has. Legal precedent — the first vendor whose challan survives
+> a court challenge owns this category. And a local cost base that undercuts
+> anyone importing engineers.
 
-## Slide 21 — The ask
+## Slide 30 — The ask
 
 > So, what do we want.
 
@@ -630,7 +797,7 @@ whether we answered.
 > If anyone in this room can make one of those four introductions, that is worth
 > more to us than the cheque.
 
-## Slide 22 — Close
+## Slide 31 — Close
 
 > We already built the hard part.
 
@@ -643,38 +810,48 @@ whether we answered.
 
 ---
 
-# Expected questions — Round 2
+# Expected questions
 
 **Handling rule: answer in one sentence, then stop.** In Round 1 we lost time to
 long answers. If they want more, they will ask. And if the answer is "we do not
 know yet", say that — this panel rewarded honesty last time.
 
-## On the business
+**Who takes which question:** business → Speaker 1. Technology, data, cameras →
+Speaker 2. Anything with a number in it → Speaker 3. If you are not sure, say
+*"[name] built that part"* and hand it over. That looks like a team, not a
+hesitation.
+
+## On pricing and money
 
 | They ask | We say |
 |---|---|
-| **Why won't the police just build this themselves?** | They could, and a university project probably will. The question is who maintains it in year three when the grant ends and the student has graduated. We sell maintained capability with someone to call — and we are happy to be the vendor *to* a government programme rather than its rival. |
-| **Why subscription and not a share of the fines?** | Fines are public revenue, so a private share is an audit problem. Being paid per fine means wanting more fines, and our goal is fewer violations. And "startup profits from fining motorists" ends us in a week. |
 | **Where did LKR 3,500 come from?** | We priced against the alternative. Covering one point around the clock takes three constables — about three hundred thousand a month. We are roughly fifty times cheaper per point-hour, and our margin at that price is about seventy four percent. |
-| **Sri Lanka is too small a market.** | Agreed, and we said it before you did — about one point six million dollars fully saturated. Sri Lanka is where we prove it. The same product, unchanged, addresses Bangladesh, Nepal, Vietnam and East Africa, where the traffic mix is identical and the death rate is worse. |
-| **Who is your first paying customer, realistically?** | Not the police. A bus fleet or a university campus — private road, no legal complexity, an owner who can sign in a week. That revenue funds the two-year government track. |
+| **Can a Sri Lankan council actually afford this?** | Forty cameras is one point six eight million a year — less than two constables cost for a year, and it fits a maintenance line they already have. And we offer it with no upfront fee at all: five thousand a month with the setup rolled in over three years. |
+| **Why does "no upfront fee" matter so much?** | Because a council can approve a recurring cost far more easily than a purchase. A purchase needs a capital vote and a tender, and that adds six to eighteen months. We would rather earn the same money in a shape they can actually sign. |
+| **What if a ministry demands a lower price at 2,000 cameras?** | We quote the published tier — two thousand two hundred — or the flat provincial licence. We published the volume ladder in advance precisely so we are never negotiating down from one number under pressure. |
+| **Government pays late. How do you survive that?** | That is the real risk, not the price. Twenty five percent of activation invoiced up front, the licence billed quarterly in advance rather than in arrears, and private-sector revenue held as working capital. |
+| **Why subscription and not a share of the fines?** | Fines are public revenue, so a private share is an audit problem. Being paid per fine means wanting more fines, and our goal is fewer violations. And "startup profits from fining motorists" ends us in a week. |
 | **How much does it cost you to serve one camera?** | About nine hundred rupees a month in compute, storage and support. That is where the seventy four percent margin comes from. |
-| **What is your valuation / what are you giving away?** | We have not set one, and we would rather agree it with an investor who understands this sector than pick a number to sound confident. What we know is what we need: fifteen million rupees for eighteen months. |
+| **Sri Lanka is too small a market.** | Agreed, and we said it before you did — about one point six million dollars fully saturated. Sri Lanka is where we prove it. The same product addresses Bangladesh, Nepal, Vietnam and East Africa, where the traffic mix is identical and the death rate is worse. |
+| **What is your valuation?** | We have not set one, and we would rather agree it with an investor who understands this sector than pick a number to sound confident. What we know is what we need: fifteen million rupees for eighteen months. |
 | **Is there any market outside enforcement?** | Yes — the anonymised analytics tier. Insurers pricing risk, the RDA finding blackspots, researchers. No plates, no faces, just where and when the danger is. |
 
-## On implementation
+## On the technology
 
 | They ask | We say |
 |---|---|
 | **How do you get parking zones and speed limits for a whole city?** | By separating two things our demo mixed up. Camera geometry is four minutes per camera — sixty seven hours for a thousand cameras, two people for two weeks. World knowledge belongs in the map and already exists in the RDA register, council gazettes and OpenStreetMap. Where nothing is known, the statutory default applies. And where we still do not know, the rule does not fire. |
 | **What if the camera gets moved?** | We detect it — the static background changes — and the system stops enforcing the geometry rules and asks to be recalibrated, rather than quietly fining the wrong people. |
 | **Can you handle a thousand cameras?** | Not by sending a thousand video streams anywhere — that is two gigabits a second. We detect at the edge and send only events, about two hundred and fifty kilobytes each. Roughly four hundred times less bandwidth. |
-| **Is your evidence admissible in court?** | The Evidence Special Provisions Act of 1995 admits computer evidence if you can show the system was operating properly — so we keep a calibration certificate per camera, an append-only audit log, and an officer approves every fine. We are not asking a court to trust an algorithm. |
+| **What hardware does each site need?** | One small computer in the existing cabinet, handling about four cameras, on a small battery. We run on the CPU today — no graphics cards and no data centre. |
+| **How do you connect to a council's cameras?** | ONVIF over RTSP, which almost every installed camera and recorder already speaks. Nothing on their side changes. |
+| **What if the council's cameras are useless?** | We expect about forty percent of any existing estate to be usable without repositioning. We survey first and put that number in writing before anyone signs. Where cameras will not do, we supply our own — which is revenue, not a problem. |
+| **How do you stop it fining the wrong person?** | Four of the six steps inside the system exist to stop it firing. We check the person is actually on the bike, we need several frames to agree, we check the vehicle is genuinely moving, and we refuse the geometric rules entirely on an uncalibrated camera. Then an officer still has to approve it. |
+| **Is your evidence admissible in court?** | The Evidence Special Provisions Act of 1995 admits computer evidence if you can show the system was operating properly — so we keep a calibration certificate per camera, a log that cannot be edited, and an officer approves every fine. We are not asking a court to trust an algorithm. |
 | **What about privacy and the Data Protection Act?** | No face recognition, ever. Plates only, for a lawful purpose, ninety days then automatic deletion. Our analytics product has no plates and no faces at all. |
 | **What is your accuracy?** | We do not have a defensible number yet and we are not going to invent one. Publishing real precision and recall per rule against a labelled Sri Lankan set is phase zero of our roadmap. What we can show today is the opposite discipline — we switched off our speed estimate, our red light rule and our seatbelt rule because they were confidently wrong. |
-| **What if the council's cameras are useless?** | We expect about forty percent of any existing estate to be usable without repositioning. We survey first and put that number in writing before anyone signs. Where cameras will not do, we supply our own — which is revenue, not a problem. |
-| **What about power cuts?** | The edge box runs on a small UPS and queues events locally. When the link comes back, it syncs. Nothing is lost. |
-| **How do you handle a wrong fine?** | An officer has already reviewed it, so it should be rare. If it still happens there is one-click dispute in the citizen's notice, and we publish our own error rate rather than waiting for someone else to. |
+| **What about power cuts?** | The edge box runs on a small battery and queues events locally. When the link comes back, it syncs. Nothing is lost. |
+| **Does it work at night, or in the rain?** | Detection degrades and plate reading degrades faster. We never issue a challan on a low-confidence plate — it goes to a human instead. Sites where plates matter get infrared-capable cameras. |
 
 ## The awkward ones
 
@@ -692,7 +869,7 @@ know yet", say that — this panel rewarded honesty last time.
 
 ## Six rules for the call
 
-1. **Do not re-pitch the technology.** They already said yes to it.
+1. **Do not re-pitch the detection.** They already said yes to it.
 2. **Answer in one sentence, then stop.** Silence is fine. They will ask for more.
 3. **Say the weakness before they find it.** It worked last time. Do it again.
 4. **Every number gets its working.** "Fifty times cheaper" is followed
