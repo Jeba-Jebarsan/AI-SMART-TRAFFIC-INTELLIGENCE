@@ -1037,7 +1037,9 @@ def analyse_image(frame, location=None, seq_base=0):
             "source": "image",
         }
         db.insert_violation(row)
-        alerts.notify_async(row)
+        # No auto-email. The row is PENDING, and a PENDING challan is a
+        # proposal, not a fine — it goes to the officer review queue and is
+        # emailed only if a human approves it (main.api_review).
         rows.append(row)
     return annotated, rows
 
@@ -1321,7 +1323,9 @@ def process_frame(model, engine, frame, fidx, device, helmet_model, state,
             "source": "ai",
         }
         db.insert_violation(row)
-        alerts.notify_async(row)      # email the police (if configured)
+        # Deliberately NOT emailed here. Detection used to notify the police
+        # directly, which made "the AI proposes, an officer decides" false in
+        # the one place it mattered. The challan is now PENDING until reviewed.
         active_ids.append(ev["track_id"])
         vm = state["veh_meta"].get(ev["track_id"]) or {}
         state["banners"].append(

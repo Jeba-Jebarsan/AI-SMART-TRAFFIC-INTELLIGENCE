@@ -130,6 +130,16 @@ def make_challan_pdf(v: dict) -> Path:
            font=_font(20), fill=(140, 140, 140))
 
     out = CHALLAN_DIR / f"{(v.get('challan_id') or 'challan').replace('/', '-')}.pdf"
+    # Pillow opens an existing PDF target "w+b" and PARSES it rather than
+    # replacing it, so a second render of the same challan dies with
+    # "trailer end not found". That happens routinely now: approving a challan
+    # emails it (which renders the PDF), and the officer then clicks Download.
+    # Remove the old file so every render starts from nothing.
+    if out.exists():
+        try:
+            out.unlink()
+        except OSError:
+            pass
     img.save(out, "PDF", resolution=150)
     return out
 
@@ -167,7 +177,16 @@ def _deliver_to_outbox(msg, v):
 
 
 def send_alert(v: dict):
-    """Send one violation to the police mailbox. Returns (ok, message)."""
+    """Send one APPROVED violation to the police mailbox. Returns (ok, message).
+
+    The status gate is here as well as in the API on purpose. Emailing the
+    police IS issuing the challan, so the last line of defence belongs next to
+    the SMTP call rather than in a route decorator someone could route around.
+    """
+    status = (v.get("status") or "PENDING").upper()
+    if status != "APPROVED":
+        return False, (f"challan is {status} - an officer must approve it "
+                       f"before it can be sent to the police")
     a, user, password = _smtp_config()
     outbox_mode = a.get("mode") == "outbox"
     if not a.get("to"):

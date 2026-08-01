@@ -56,7 +56,7 @@ document. Then cut slide 5. **Never cut slides 9 and 10.**
 | 2 | You asked us seven questions | Show we listened. Buys goodwill in ten seconds |
 | 3 | Who benefits is not who signs | Prove we know the customer, not just the user |
 | 4 | The ladder to the Police | **Decisive.** The direct answer to "how do you reach the police" |
-| 5 | The AI proposes, an officer decides | **Decisive.** Solves legal, trust and political risk at once |
+| 5 | The AI proposes, an officer decides | **Decisive.** Solves legal, trust and political risk at once — and it is now built, so it can be demoed |
 | 6 | The whole system in six steps | Give them the map before the detail |
 | 7 | Cameras already on the poles | CCTV import + the 400× bandwidth argument |
 | 8 | What the AI does with one frame | Why the output can be trusted as evidence |
@@ -176,19 +176,32 @@ document. Then cut slide 5. **Never cut slides 9 and 10.**
 
 > The AI proposes. A police officer decides.
 
-> Every violation goes into an officer's review queue, with the photograph, the
-> rule it broke, and how confident we are. It becomes a real fine only when a
-> human presses approve.
+> Every violation our system finds is marked PENDING. It goes into an officer's
+> review queue with the photograph, the rule it broke, and how confident we are.
+> It becomes a real fine only when a named officer presses approve.
+
+> **[Point at the green line — this is new since Round 1, so say so]**
+
+> And this is built and running today. It is not a plan.
+
+> Until an officer approves it, the system **refuses** to print it, export it as
+> a PDF, or email it to the police. That refusal is in the server, not in the
+> screen — you cannot get around it by finding another button.
 
 > **[Pause]**
 
-> That one choice solves four problems at once. **Legally**, a human is
+> That one choice solves four problems at once. **Legally**, a named human is
 > accountable, not an algorithm. **For trust**, no citizen is ever fined by a
 > machine. **For accuracy**, every time an officer rejects one, that is us
-> measuring our own error rate for free. And **politically**, it kills the
-> headline "a robot fined me" before anyone can write it.
+> measuring our own error rate for free. And **it is auditable** — approve,
+> reject and cancel are all append-only. Even wiping the session is written into
+> the trail, with a count of how many challans were destroyed.
 
 > We are not asking a court, or a country, to trust an algorithm.
+
+**[If they ask to see it: switch to the dashboard, open a violation, and show
+the PENDING stamp with the greyed-out PDF button. Thirty seconds. Then come
+back.]**
 
 > **[Hand over]** — *Now [Speaker 2] will show you how it actually works, and
 > answer the question you pressed us hardest on.*
@@ -541,20 +554,28 @@ anything runs over, it should be Part 3, not this.
 > Last slide. Three columns.
 
 > **[Left]** How we launch it. The first three months we incorporate, publish real
-> accuracy numbers, and build the officer review queue. Then the free audit, then
-> the letter, then a supervised pilot. Private customers run in parallel and keep
-> us alive. Western Province and breakeven by month twenty-four.
+> accuracy numbers, and do the data protection assessment. The officer review
+> queue was on this list — we built it, so it has come off. Then the free audit,
+> then the letter, then a supervised pilot. Private customers run in parallel and
+> keep us alive. Western Province and breakeven by month twenty-four.
 
 > One thing I want to flag: to deliver a fine you have to turn a number plate into
 > a registered owner, and that needs a data-sharing agreement with the Department
 > of Motor Traffic. That is the longest-lead item in the whole plan, so we start
 > it in month four, not month twenty.
 
-> **[Middle]** What will go wrong. Six things, each with what we do about it. Let
-> me take one — the one nobody talks about. Somebody will ring up and ask for a
-> challan to disappear. So every view, every approval and every cancellation is
-> written to a log that cannot be edited, with a named officer against it. We
-> cannot stop it happening. We can make sure it leaves a mark.
+> **[Middle]** What will go wrong. Each one with what we do about it. Let me take
+> the one nobody talks about. Somebody will ring up and ask for a challan to
+> disappear.
+
+> **[Pause]**
+
+> So every approval, every rejection and every cancellation is written to a log
+> that cannot be edited, with a named officer and a reason against it. And if
+> somebody wipes the whole session to make the problem go away, *that is written
+> into the same log too* — including how many challans were destroyed and how
+> many of them had already been approved. We cannot stop it happening. We can
+> make sure it always leaves a mark.
 
 > **[Right]** What we need. Fifteen million rupees — about fifty thousand dollars
 > — for eighteen months. Sixty percent is salaries.
@@ -617,7 +638,10 @@ hesitation.
 | **What hardware does each site need?** | One small computer in the existing cabinet, handling about four cameras, on a small battery. We run on the CPU today — no graphics cards, no data centre. |
 | **How do you connect to a council's cameras?** | ONVIF over RTSP, which almost every installed camera already speaks. Nothing on their side changes. |
 | **What if their cameras are useless?** | We expect about forty percent of any estate to be usable without repositioning. We survey first and put that number in writing before anyone signs. Where cameras will not do, we supply our own — which is revenue, not a problem. |
-| **How do you stop it fining the wrong person?** | Four of the six steps inside the system exist to stop it firing. We check the person is really on the bike, we need several frames to agree, we check the vehicle is really moving, and we refuse the geometric rules on an uncalibrated camera. Then an officer still has to approve it. |
+| **How do you stop it fining the wrong person?** | Four of the six steps inside the system exist to stop it firing. We check the person is really on the bike, we need several frames to agree, we check the vehicle is really moving, and we refuse the geometric rules on an uncalibrated camera. Then a named officer still has to approve it before it can be issued at all. |
+| **Does the officer approval actually exist, or is it a plan?** | It is built. Every violation is PENDING until a named officer approves it, and until then the server refuses to print it, export it or email it — the block is in the backend, not the button. We can show you in thirty seconds. |
+| **What stops someone deleting an inconvenient challan?** | Approvals, rejections and cancellations are append-only, each with a named officer and a reason. Wiping the session does not erase that trail — the wipe itself is written into it, with a count of how many challans were destroyed and how many had already been approved. |
+| **Who can approve? Is there a login?** | Not yet — today the officer types their name and it is recorded against every decision. Real authentication with police credentials is a deployment requirement, and it is honestly not built. We would rather tell you that than let you assume it. |
 | **Is your evidence admissible in court?** | The Evidence Special Provisions Act of 1995 admits computer evidence if you can show the system was operating properly — so we keep a calibration certificate per camera, a log that cannot be edited, and an officer approves every fine. We are not asking a court to trust an algorithm. |
 | **What about privacy?** | No face recognition, ever. Plates only, for a lawful purpose, ninety days then automatic deletion. That is designed against the Data Protection Act of 2022. Our analytics product has no plates and no faces at all. |
 | **What is your accuracy?** | We do not have a defensible number yet and we are not going to invent one. Publishing real precision and recall per rule against a labelled Sri Lankan set is our first engineering priority. What we can show today is the opposite discipline — we switched off our speed estimate, our red light rule and our seatbelt rule because they were confidently wrong. |
@@ -634,7 +658,7 @@ hesitation.
 | **What happens when you graduate?** | We incorporate now with a vesting agreement, and the first thing the seed money buys is a full-time engineer. We are not pretending this survives on goodwill. |
 | **Isn't this just surveillance?** | It is enforcement of laws that already exist, with an officer accountable for every decision, no face recognition, and a ninety-day deletion policy. The alternative is not privacy — the alternative is three thousand deaths a year and nobody watching. |
 | **Your seatbelt feature still doesn't work.** | Correct, and it is on our SWOT. The model we obtained calls a belted driver a violation and calls an empty road a violation. We disabled the rule rather than accuse innocent people. Fixing it needs a detection model trained on our own data. |
-| **What have you changed since Round 1?** | Nothing about the detection — you told us that worked. What changed is that we now know who signs, how we reach them, what it costs, what it earns, and what will go wrong. That is what you asked for. |
+| **What have you changed since Round 1?** | Nothing about the detection — you told us that worked. What changed is that we now know who signs, how we reach them, what it costs, what it earns, and what will go wrong. We also built one thing: the officer review queue, so no fine can be issued without a named human approving it. |
 
 ---
 

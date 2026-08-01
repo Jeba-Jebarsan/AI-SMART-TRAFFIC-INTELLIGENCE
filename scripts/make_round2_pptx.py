@@ -219,24 +219,27 @@ def main():
     box(s, Inches(0.9), Inches(2.15), Inches(11.5), Inches(0.5),
         "THE DESIGN DECISION THAT MAKES ENFORCEMENT POSSIBLE", size=13.5,
         colour=MUTED, bold=True)
-    box(s, Inches(0.9), Inches(2.75), Inches(11.5), Inches(1.0),
+    box(s, Inches(0.9), Inches(2.7), Inches(11.5), Inches(1.0),
         "The AI proposes. A police officer decides.", size=38, colour=INK, bold=True)
-    box(s, Inches(0.9), Inches(4.0), Inches(11.5), Inches(0.9),
-        "Every violation goes into an officer's review queue with the photograph, the "
-        "rule and the confidence. It becomes a fine only when a human presses approve.",
-        size=17, colour=INK, space=0)
+    box(s, Inches(0.9), Inches(3.85), Inches(11.5), Inches(0.5),
+        "Built and running today - not a plan.", size=17, colour=GREEN, bold=True)
+    box(s, Inches(0.9), Inches(4.35), Inches(11.5), Inches(0.55),
+        "Every violation is PENDING until a named officer approves it. Until then the "
+        "system refuses to print, export or email it - the block is in the server, not "
+        "the screen.", size=14, colour=INK, space=0)
     for i, (t, d) in enumerate([
-            ("Legal", "Evidence Act No. 14 of 1995 - a human is accountable"),
+            ("Legal", "Evidence Act No. 14 of 1995 - a named human is accountable"),
             ("Trust", "No citizen is ever fined by a machine"),
             ("Accuracy", "Officer rejections measure our false-positive rate"),
-            ("Politics", "Kills the 'a robot fined me' headline")]):
+            ("Auditable", "Approve, reject and cancel are append-only. Even a session "
+                          "wipe is recorded")]):
         x = Inches(0.85 + i * 2.95)
-        card(s, x, Inches(5.35), Inches(2.75), Inches(1.2))
-        box(s, x + Inches(0.18), Inches(5.47), Inches(2.4), Inches(0.4), t,
+        card(s, x, Inches(5.15), Inches(2.75), Inches(1.35))
+        box(s, x + Inches(0.18), Inches(5.27), Inches(2.4), Inches(0.4), t,
             size=14, colour=ACCENT, bold=True)
-        box(s, x + Inches(0.18), Inches(5.85), Inches(2.4), Inches(0.7), d,
+        box(s, x + Inches(0.18), Inches(5.65), Inches(2.4), Inches(0.8), d,
             size=10.5, colour=MUTED, space=0)
-    note(s, "We are not asking a court, or a country, to trust an algorithm.", y=6.7,
+    note(s, "We are not asking a court, or a country, to trust an algorithm.", y=6.65,
          size=15)
 
     # ####################################################### PART 2  TECHNOLOGY
@@ -492,7 +495,8 @@ def main():
     header(s, "Launch, risks, and what we need", P3)
     cols = [
         ("HOW WE LAUNCH IT", ACCENT, [
-            "**0-3 mo** Incorporate. Publish real accuracy. Officer review queue. PDPA.",
+            "**0-3 mo** Incorporate. Publish real accuracy. PDPA assessment. "
+            "(Officer review queue: **done**.)",
             "**2-5 mo** Free 30-day audit, 1 council.",
             "**4-7 mo** Letter from NCRS / Police HQ.",
             "**6-12 mo** Supervised pilot, 20-40 cameras.",
@@ -506,7 +510,9 @@ def main():
             "**Privacy backlash** -> no face recognition, ever. Plates only, 90-day purge",
             "**Cameras are the wrong quality** -> survey and say so before anyone signs",
             "**Government pays late** -> bill in advance, hold private revenue as buffer",
-            "**A wrong fine** -> human gate, one-click dispute, publish our own error rate"]),
+            "**A wrong fine** -> human gate (built), one-click dispute, publish our error rate",
+            "**'Make this challan disappear'** -> append-only trail; even a session wipe "
+            "is recorded"]),
         ("WHAT WE NEED", GREEN, [
             "**LKR 15M** (~USD 50,000) for 18 months of runway. 60% salaries.",
             "",

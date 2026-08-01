@@ -353,6 +353,9 @@
           <option>Illegal Parking</option>
         </select>
       </div>
+      <div id="statuschips" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;padding:8px 12px;border-bottom:1px solid var(--panel-brd)">
+        <span style="font-size:10px;letter-spacing:1px;color:var(--muted);margin-right:2px">REVIEW</span>
+      </div>
       <div id="typechips" style="display:none;gap:6px;flex-wrap:wrap;padding:8px 12px;border-bottom:1px solid var(--panel-brd)"></div>
       <div class="feed" id="feed"></div>
     </div>
@@ -398,8 +401,18 @@
         <div class="kv"><span class="lab">Location</span><span class="val" id="ch-loc"></span></div>
         <div class="kv"><span class="lab">Plate Confidence</span><span class="val" id="ch-conf"></span></div>
         <div class="kv"><span class="lab">Detection Source</span><span class="val" id="ch-src"></span></div>
+        <div class="kv" id="ch-rev-row"><span class="lab">Reviewed by</span><span class="val" id="ch-rev"></span></div>
         <div style="margin-top:14px"><span class="stamp" id="ch-stamp">PENDING</span></div>
       </div>
+    </div>
+    <!-- Officer review. The AI proposes; a named human decides. Until that
+         happens the challan cannot be printed, exported or emailed. -->
+    <div id="reviewbar" style="padding:12px 20px;border-top:1px solid var(--panel-brd);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted)" id="reviewmsg">Officer decision required before this can be issued.</span>
+      <span style="flex:1"></span>
+      <button class="btn" id="approveBtn" style="background:var(--green);border-color:var(--green)">✔ Approve</button>
+      <button class="btn ghost" id="rejectBtn">✕ Reject</button>
+      <button class="btn ghost" id="reopenBtn" style="display:none">↺ Reopen</button>
     </div>
     <div class="cfoot">
       <button class="btn warn" id="sendPolice" title="Emails this challan + evidence + plate crop to the configured police address">📧 Send to Police</button>
@@ -758,11 +771,19 @@ function renderFeed(list){
     const thumb=v.snapshot_url
       ?`<img class="thumb" loading="lazy" src="${v.snapshot_url}" alt="">`
       :`<div class="thumb ph">📷</div>`;
+    // A row must say whether this is a FINE or only a PROPOSAL. Showing them
+    // identically is how an operator ends up believing the AI issued a fine.
+    const st=(v.status||"PENDING").toUpperCase();
+    const sc=st==="APPROVED"?"var(--green)":st==="REJECTED"?"var(--muted)":"var(--amber)";
+    const slab=st==="APPROVED"?"✔ approved"+(v.reviewed_by?" · "+esc(v.reviewed_by):"")
+              :st==="REJECTED"?"✕ rejected"+(v.reviewed_by?" · "+esc(v.reviewed_by):"")
+              :"⏳ proposed — awaiting officer review";
     row.innerHTML=`${thumb}
       <div class="mid">
         <div class="plate mono ${unk?"unk":""}">${unk?"PLATE UNREADABLE":esc(v.plate)}</div>
         <div class="sub">${fmtTime(v.timestamp)}${v.video_s!=null?` · ${fmtVS(v.video_s)}`:""}
           · <span style="color:${col}">${esc(v.type)}</span>${v.speed_kmph?(" · "+v.speed_kmph+" km/h"):""}${v.drive_seconds?(" · "+Math.round(v.drive_seconds/60)+" min non-stop"):""}</div>
+        <div class="sub" style="color:${sc};font-size:10.5px;margin-top:2px">${slab}</div>
       </div>
       <div style="text-align:right">
         <span class="badge" style="background:${col}22;color:${col}">${esc(v.type)}</span>
@@ -895,8 +916,7 @@ function openChallan(v){
   const sr=$("#ch-speed-row");
   if(v.speed_kmph){sr.style.display="";$("#ch-speed").textContent=v.speed_kmph+" km/h (limit "+(META.speed_limit||60)+")";}
   else sr.style.display="none";
-  const stamp=$("#ch-stamp");stamp.textContent=v.status;
-  stamp.className="stamp"+(v.status==="PAID"?" paid":"");
+  applyReviewState(v);
   const img=$("#ch-img");
   if(v.snapshot_url){img.src=v.snapshot_url;img.style.display="";}
   else{img.style.display="none";}
@@ -921,6 +941,71 @@ $("#sendPolice").onclick=async()=>{
   }catch(e){toast("Email failed: "+e.message);}
   b.disabled=false;b.textContent="📧 Send to Police";
 };
+
+/* ---------- officer review ----------
+   Nothing here is security — the server refuses an unapproved challan on its
+   own (main._require_approved, alerts.send_alert). This just makes the state
+   obvious, so an officer is never wondering whether they already decided. */
+function officerName(){
+  let n=localStorage.getItem("officer")||"";
+  if(!n){
+    n=(prompt("Reviewing officer name / badge number.\nEvery approval and rejection is recorded against this name.")||"").trim();
+    if(n)localStorage.setItem("officer",n);
+  }
+  return n;
+}
+function applyReviewState(v){
+  const st=(v.status||"PENDING").toUpperCase();
+  const stamp=$("#ch-stamp");
+  stamp.textContent=st==="PENDING"?"PENDING REVIEW":st;
+  stamp.className="stamp"+(st==="APPROVED"?" paid":"");
+  stamp.style.color=st==="REJECTED"?"var(--muted)":"";
+  const rr=$("#ch-rev-row");
+  if(v.reviewed_by){
+    rr.style.display="";
+    $("#ch-rev").textContent=v.reviewed_by+(v.reviewed_at?" · "+v.reviewed_at.replace("T"," "):"");
+  }else rr.style.display="none";
+
+  const approved=st==="APPROVED";
+  // An unapproved challan is a proposal. It must not be printable, exportable
+  // or emailable, or "a human approved this" is a claim about the UI only.
+  for(const id of ["#sendPolice","#pdfChallan","#printChallan"]){
+    const b=$(id);b.disabled=!approved;b.style.opacity=approved?"":"0.4";
+    b.title=approved?"":"An officer must approve this challan first";
+  }
+  $("#approveBtn").style.display=approved?"none":"";
+  $("#rejectBtn").style.display=st==="REJECTED"?"none":"";
+  $("#reopenBtn").style.display=st==="PENDING"?"none":"";
+  $("#reviewmsg").textContent=
+    st==="APPROVED"?"Approved — this challan can now be issued."
+    :st==="REJECTED"?"Rejected — recorded, and never issued."
+    :"Officer decision required before this can be issued.";
+}
+async function review(action){
+  if(!CURV)return;
+  const officer=officerName();
+  if(!officer){toast("An officer name is required");return;}
+  let note="";
+  if(action==="reject"){
+    note=(prompt("Why is this being rejected? (recorded in the audit trail)")||"").trim();
+    if(!note){toast("A reason is required to reject");return;}
+  }
+  try{
+    const r=await fetch(API+"/api/violations/"+CURV.id+"/review",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({action:action,officer:officer,note:note})});
+    const j=await r.json();
+    if(!r.ok){toast("Failed: "+(j.detail||r.status));return;}
+    CURV=j.violation;applyReviewState(CURV);
+    toast(action==="approve"?"Approved by "+officer+" ✔"
+         :action==="reject"?"Rejected — recorded in the audit trail"
+         :"Reopened for review");
+    refresh();
+  }catch(e){toast("Failed: "+e.message);}
+}
+$("#approveBtn").onclick=()=>review("approve");
+$("#rejectBtn").onclick=()=>review("reject");
+$("#reopenBtn").onclick=()=>review("reopen");
 
 /* ---------- CSV export ---------- */
 $("#csv").onclick=()=>{
@@ -956,24 +1041,49 @@ $("#tab-vio").onclick=()=>setTab(false);
 $("#tab-anpr").onclick=()=>setTab(true);
 
 /* ---------- refresh loop ---------- */
-let FT={q:"",type:""};
+let FT={q:"",type:"",status:""};
 async function refresh(){
   try{
     const p=new URLSearchParams({limit:"300"});
     if(FT.q)p.set("plate",FT.q);
     if(FT.type)p.set("type",FT.type);
+    if(FT.status)p.set("status",FT.status);
     const [s,v,veh]=await Promise.all([
       getJSON("/api/stats"),
       getJSON("/api/violations?"+p.toString()),
       getJSON("/api/vehicles"),
     ]);
     VLIST=v;VEHS=veh;
+    renderStatusChips(s);
     renderStats(s);renderFeed(v);renderVehicles(veh);
     renderTimeline(v);renderHotspot(v);renderInsights(s,v);
   }catch(e){/* server not ready yet */}
 }
 $("#q").oninput=e=>{FT.q=e.target.value.trim();refresh();};
 $("#ftype").onchange=e=>{FT.type=e.target.value;refresh();};
+
+/* The review queue filter. Always visible with zero counts rather than
+   data-driven — a filter that appears only once it has something in it is a
+   filter nobody knows exists. */
+function renderStatusChips(s){
+  const bar=$("#statuschips");
+  const opts=[["","All",s.total_violations||0],
+              ["PENDING","⏳ Pending",s.pending||0],
+              ["APPROVED","✔ Approved",s.approved||0],
+              ["REJECTED","✕ Rejected",s.rejected||0]];
+  const html=opts.map(([val,label,n])=>{
+    const on=FT.status===val;
+    const col=val==="APPROVED"?"var(--green)":val==="REJECTED"?"var(--muted)"
+             :val==="PENDING"?"var(--amber)":"var(--fg)";
+    return `<span class="chip stat-chip" data-s="${val}" style="cursor:pointer;
+      border-color:${on?col:"var(--panel-brd)"};color:${col};
+      opacity:${n||on||!val?1:.55};font-weight:${on?700:500}">${label} ${n}</span>`;
+  }).join("");
+  bar.innerHTML=`<span style="font-size:10px;letter-spacing:1px;color:var(--muted);margin-right:2px">REVIEW</span>`+html;
+  bar.querySelectorAll(".stat-chip").forEach(el=>{
+    el.onclick=()=>{FT.status=el.dataset.s;refresh();};
+  });
+}
 
 /* ---------- actions ---------- */
 $("#clearall").onclick=async()=>{

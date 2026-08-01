@@ -71,8 +71,10 @@ def api_stats():
 
 @app.get("/api/violations")
 def api_violations(limit: int = 200, type: Optional[str] = None,
-                   plate: Optional[str] = None):
-    rows = db.all_violations(limit=limit, vtype=type, plate=plate)
+                   plate: Optional[str] = None,
+                   status: Optional[str] = None):
+    rows = db.all_violations(limit=limit, vtype=type, plate=plate,
+                             status=status)
     for r in rows:
         r["snapshot_url"] = f"/media/{r['snapshot']}" if r.get("snapshot") else None
         r["plate_img_url"] = f"/media/{r['plate_img']}" if r.get("plate_img") else None
@@ -127,10 +129,54 @@ def _find_violation(vid: int):
     raise HTTPException(status_code=404, detail="not found")
 
 
+def _require_approved(row: dict):
+    """The AI proposes; an officer decides. Enforce that here, not in the UI.
+
+    A challan the system generated on its own must not be able to leave the
+    building as a PDF or an email — otherwise "a human approved this" is a
+    claim about the interface rather than about the system, and hiding the
+    button would be the only thing standing between a detection and a fine.
+    """
+    status = (row.get("status") or "PENDING").upper()
+    if status != "APPROVED":
+        raise HTTPException(
+            status_code=409,
+            detail=f"challan {row.get('challan_id') or row.get('id')} is "
+                   f"{status}. An officer must approve it before it can be "
+                   f"issued.")
+    return row
+
+
+class ReviewIn(BaseModel):
+    action: str = "approve"          # approve | reject | reopen
+    officer: str = ""
+    note: str = ""
+
+
+@app.post("/api/violations/{vid}/review")
+def api_review(vid: int, body: ReviewIn):
+    """Record an officer's decision on one proposed violation."""
+    try:
+        row = db.review_violation(vid, body.action, body.officer, body.note)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    # Approval is the moment a proposal becomes a challan, so this is where
+    # the police notification belongs - not at detection time.
+    if row.get("status") == "APPROVED":
+        alerts.notify_async(row)
+    return {"ok": True, "violation": row}
+
+
+@app.get("/api/audit")
+def api_audit(limit: int = 200, violation_id: int = None):
+    """The append-only review trail: who decided what, and when."""
+    return {"entries": db.audit_log(limit=limit, violation_id=violation_id)}
+
+
 @app.post("/api/violations/{vid}/alert")
 def api_send_alert(vid: int):
     """Manually email this violation (evidence + PDF challan) to the police."""
-    ok, msg = alerts.send_alert(_find_violation(vid))
+    ok, msg = alerts.send_alert(_require_approved(_find_violation(vid)))
     if not ok:
         raise HTTPException(status_code=400, detail=msg)
     return {"ok": True, "detail": msg}
@@ -138,8 +184,8 @@ def api_send_alert(vid: int):
 
 @app.get("/api/violations/{vid}/pdf")
 def api_challan_pdf(vid: int):
-    """Download the print-ready PDF e-challan for a violation."""
-    pdf = alerts.make_challan_pdf(_find_violation(vid))
+    """Download the print-ready PDF e-challan for an APPROVED violation."""
+    pdf = alerts.make_challan_pdf(_require_approved(_find_violation(vid)))
     return FileResponse(str(pdf), media_type="application/pdf",
                         filename=pdf.name)
 

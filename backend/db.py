@@ -57,6 +57,21 @@ CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT
 );
+-- Append-only review trail. Rows are INSERTed and never UPDATEd or DELETEd,
+-- anywhere in this codebase — that is the whole point of it. A challan that
+-- gets quietly cancelled must still leave a mark naming who cancelled it, so
+-- clear() writes a SESSION_RESET row here rather than wiping the table.
+CREATE TABLE IF NOT EXISTS audit (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    ts           TEXT,
+    violation_id INTEGER,
+    challan_id   TEXT,
+    action       TEXT,
+    from_status  TEXT,
+    to_status    TEXT,
+    officer      TEXT,
+    note         TEXT
+);
 """
 
 # columns added after the first release — applied to old DBs on startup
@@ -65,6 +80,9 @@ _MIGRATIONS = {
         "plate_img": "TEXT", "video_s": "REAL",
         "box": "TEXT", "source": "TEXT DEFAULT 'ai'",
         "drive_seconds": "REAL",
+        "reviewed_by": "TEXT",
+        "reviewed_at": "TEXT",
+        "review_note": "TEXT",
     },
     "vehicles": {
         "plate_hits": "INTEGER DEFAULT 0",
@@ -99,10 +117,86 @@ def init_db():
 
 
 def clear():
+    """Wipe violations/vehicles/meta at the start of a live session.
+
+    The audit table is deliberately NOT wiped. An append-only trail that any
+    caller can erase proves nothing, so the wipe is itself recorded — including
+    how many challans were destroyed and how many of those a human had already
+    approved. That row is what makes "a cancelled challan always leaves a mark"
+    true in code rather than only on a slide.
+    """
     with _lock, get_conn() as c:
+        n = c.execute("SELECT COUNT(*) n FROM violations").fetchone()["n"]
+        approved = c.execute(
+            "SELECT COUNT(*) n FROM violations WHERE status='APPROVED'"
+        ).fetchone()["n"]
         c.execute("DELETE FROM violations")
         c.execute("DELETE FROM vehicles")
         c.execute("DELETE FROM meta")
+        if n:
+            c.execute(
+                """INSERT INTO audit
+                     (ts, violation_id, challan_id, action, from_status,
+                      to_status, officer, note)
+                   VALUES (?, NULL, NULL, 'SESSION_RESET', NULL, NULL,
+                           'system', ?)""",
+                (_now(), f"{n} violation(s) cleared for a new session "
+                         f"({approved} had been approved)"))
+
+
+def _now():
+    import datetime
+    return datetime.datetime.now().isoformat(timespec="seconds")
+
+
+REVIEW_ACTIONS = {"approve": "APPROVED", "reject": "REJECTED",
+                  "reopen": "PENDING"}
+
+
+def review_violation(vid: int, action: str, officer: str, note: str = ""):
+    """Record a human decision on one violation. Returns the updated row.
+
+    Raises ValueError for an unknown action, a missing violation, or a blank
+    officer name — an approval nobody is named on is not an approval.
+    """
+    action = (action or "").strip().lower()
+    if action not in REVIEW_ACTIONS:
+        raise ValueError(f"unknown action {action!r}")
+    officer = (officer or "").strip()
+    if not officer:
+        raise ValueError("officer name is required")
+    to_status = REVIEW_ACTIONS[action]
+    ts = _now()
+    with _lock, get_conn() as c:
+        row = c.execute("SELECT * FROM violations WHERE id=?", (vid,)).fetchone()
+        if row is None:
+            raise ValueError(f"no violation with id {vid}")
+        from_status = row["status"] or "PENDING"
+        c.execute(
+            "UPDATE violations SET status=?, reviewed_by=?, reviewed_at=?, "
+            "review_note=? WHERE id=?",
+            (to_status, officer, ts, note or None, vid))
+        c.execute(
+            """INSERT INTO audit
+                 (ts, violation_id, challan_id, action, from_status, to_status,
+                  officer, note)
+               VALUES (?,?,?,?,?,?,?,?)""",
+            (ts, vid, row["challan_id"], action.upper(), from_status,
+             to_status, officer, note or None))
+        return dict(c.execute("SELECT * FROM violations WHERE id=?",
+                              (vid,)).fetchone())
+
+
+def audit_log(limit=200, violation_id=None):
+    q = "SELECT * FROM audit"
+    args = []
+    if violation_id is not None:
+        q += " WHERE violation_id = ?"
+        args.append(violation_id)
+    q += " ORDER BY id DESC LIMIT ?"
+    args.append(limit)
+    with get_conn() as c:
+        return [dict(r) for r in c.execute(q, args).fetchall()]
 
 
 def is_empty():
@@ -187,12 +281,17 @@ def get_meta(key, default=None):
         return json.loads(r["value"]) if r else default
 
 
-def all_violations(limit=500, vtype=None, plate=None):
+def all_violations(limit=500, vtype=None, plate=None, status=None):
     q = "SELECT * FROM violations"
     conds, args = [], []
     if vtype:
         conds.append("type = ?")
         args.append(vtype)
+    if status:
+        # Rows written before the review workflow existed have no status;
+        # they are pending, not invisible.
+        conds.append("COALESCE(status, 'PENDING') = ?")
+        args.append(status.upper())
     if plate:
         conds.append("REPLACE(UPPER(plate), ' ', '') LIKE ?")
         args.append("%" + plate.upper().replace(" ", "") + "%")
@@ -234,11 +333,26 @@ def stats():
             "SELECT track_id, plate, cls, top_speed, over_speed FROM vehicles "
             "WHERE top_speed IS NOT NULL AND top_speed > 0 "
             "ORDER BY top_speed DESC LIMIT 5").fetchall()]
+        status_rows = [dict(r) for r in c.execute(
+            "SELECT COALESCE(status, 'PENDING') s, COUNT(*) n, "
+            "COALESCE(SUM(fine),0) f FROM violations GROUP BY s").fetchall()]
+        audit_n = c.execute("SELECT COUNT(*) n FROM audit").fetchone()
 
+    by_status = {r["s"]: r["n"] for r in status_rows}
+    # Only an APPROVED challan is a real fine. The headline money figure must
+    # not count what a human has not yet agreed to, or the dashboard is
+    # advertising revenue the system invented by itself.
+    approved_fines = next((r["f"] for r in status_rows if r["s"] == "APPROVED"), 0)
     by_type = {r["type"]: {"count": r["n"], "fines": r["f"]} for r in rows}
     return {
         "total_violations": total["n"],
         "total_fines": total["f"],
+        "by_status": by_status,
+        "pending": by_status.get("PENDING", 0),
+        "approved": by_status.get("APPROVED", 0),
+        "rejected": by_status.get("REJECTED", 0),
+        "approved_fines": approved_fines,
+        "audit_entries": audit_n["n"],
         "no_helmet": by_type.get("No Helmet", {}).get("count", 0),
         "by_type": by_type,
         "timeline": timeline,
