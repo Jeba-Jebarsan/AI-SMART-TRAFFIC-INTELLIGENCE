@@ -155,10 +155,23 @@ def render(md_path, pdf_path, subtitle):
     build(pdf_path, A4, out, subtitle, margin=22)
 
 
+# The footer subtitle is per-document. Keyed on the file so a teammate running
+# `python scripts/md_to_pdf.py docs/BUSINESS_PLAN.md` gets the right banner
+# instead of every PDF in the repo claiming to be the speaking scripts.
+SUBTITLES = {
+    "SPEAKING_SCRIPTS": "Speaking Scripts  |  1 August 2026",
+    "SPEAKING_SCRIPTS_ROUND2": "Speaking Scripts  |  Round 2",
+    "BUSINESS_PLAN": "Business Plan  |  Round 2",
+    "FOOTAGE_SHOT_LIST": "Footage Shot List",
+}
+
+
 def main():
     src = sys.argv[1] if len(sys.argv) > 1 else "docs/SPEAKING_SCRIPTS.md"
     dst = os.path.splitext(src)[0] + ".pdf"
-    render(src, dst, "Speaking Scripts  |  1 August 2026")
+    stem = os.path.splitext(os.path.basename(src))[0].upper()
+    subtitle = SUBTITLES.get(stem, stem.replace("_", " ").title())
+    render(src, dst, subtitle)
 
 
 if __name__ == "__main__":
